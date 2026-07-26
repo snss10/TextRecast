@@ -1,0 +1,37 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore dependencies
+        run: dotnet restore TextRecast.slnx
+
+      - name: Verify formatting
+        run: dotnet format TextRecast.slnx --no-restore --verify-no-changes
+
+      - name: Run tests
+        run: dotnet test TextRecast.slnx -c Release --no-restore
+
+      - name: Build release
+        run: dotnet build TextRecast.slnx -c Release --no-restore

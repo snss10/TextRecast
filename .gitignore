@@ -1,0 +1,56 @@
+# Build output
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+[Pp]ublish/
+[Aa]rtifacts/
+
+# Visual Studio and IDE state
+.vs/
+.vscode/
+.idea/
+.fleet/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.rsuser
+
+# JetBrains Rider
+*.sln.iml
+_ReSharper*/
+*.DotSettings.user
+
+# Test and coverage output
+TestResults/
+coverage/
+coverage.*
+*.coverage
+*.coveragexml
+*.binlog
+BenchmarkDotNet.Artifacts/
+
+# NuGet packages and generated package artifacts
+*.nupkg
+*.snupkg
+packages/
+
+# Local logs, dumps, and temporary files
+*.log
+*.dmp
+*.mdmp
+*.tmp
+*.temp
+*.bak
+*.orig
+~$*
+
+# OS metadata
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Large local model binaries are downloaded separately.
+Models/*.gguf
+Models/*.partial

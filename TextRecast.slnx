@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TextRecast.App/TextRecast.App.csproj" />
+    <Project Path="src/TextRecast.Core/TextRecast.Core.csproj" />
+    <Project Path="src/TextRecast.Infrastructure/TextRecast.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TextRecast.Core.Tests/TextRecast.Core.Tests.csproj" />
+    <Project Path="tests/TextRecast.Infrastructure.Tests/TextRecast.Infrastructure.Tests.csproj" />
+  </Folder>
+</Solution>

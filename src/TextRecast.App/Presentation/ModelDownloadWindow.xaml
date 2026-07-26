@@ -1,0 +1,81 @@
+<Window x:Class="TextRecast.App.Presentation.ModelDownloadWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Set up TextRecast"
+        Icon="/Assets/Brand/textrecast-icon.png"
+        Width="460"
+        MinHeight="330"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize"
+        Background="#F7F8FA"
+        ContentRendered="Window_ContentRendered"
+        Closing="Window_Closing">
+    <Grid Margin="30">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Orientation="Horizontal">
+            <Image Width="52"
+                   Height="52"
+                   Margin="0,0,16,0"
+                   Source="/Assets/Brand/textrecast-icon.png" />
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock FontSize="22"
+                           FontWeight="SemiBold"
+                           Foreground="#111318"
+                           Text="Preparing TextRecast" />
+                <TextBlock Margin="0,4,0,0"
+                           Foreground="#5D6470"
+                           Text="One-time local model download" />
+            </StackPanel>
+        </StackPanel>
+
+        <TextBlock Grid.Row="1"
+                   Margin="0,24,0,0"
+                   Foreground="#303641"
+                   TextWrapping="Wrap"
+                   Text="TextRecast needs a 1.1 GB local language model. It will be stored on this computer and used privately for formatting." />
+
+        <ProgressBar x:Name="DownloadProgressBar"
+                     Grid.Row="2"
+                     Height="10"
+                     Margin="0,24,0,0"
+                     Minimum="0"
+                     Maximum="100" />
+
+        <StackPanel Grid.Row="3" Margin="0,10,0,0">
+            <TextBlock x:Name="StatusTextBlock"
+                       Foreground="#303641"
+                       Text="Starting download..." />
+            <TextBlock x:Name="DetailsTextBlock"
+                       Margin="0,5,0,0"
+                       Foreground="#6E7681"
+                       FontSize="11"
+                       Text="Keep TextRecast open while the model downloads." />
+        </StackPanel>
+
+        <StackPanel Grid.Row="4"
+                    Margin="0,24,0,0"
+                    HorizontalAlignment="Right"
+                    Orientation="Horizontal">
+            <Button x:Name="RetryButton"
+                    Width="88"
+                    Height="32"
+                    Margin="0,0,10,0"
+                    Visibility="Collapsed"
+                    Content="Retry"
+                    Click="Retry_Click" />
+            <Button x:Name="CancelButton"
+                    Width="88"
+                    Height="32"
+                    Content="Cancel"
+                    Click="Cancel_Click" />
+        </StackPanel>
+    </Grid>
+</Window>

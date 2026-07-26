@@ -1,0 +1,60 @@
+<Window x:Class="TextRecast.App.Presentation.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="TextRecast"
+        Icon="/Assets/Brand/textrecast-icon.png"
+        Width="36"
+        Height="36"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Topmost="True"
+        ShowInTaskbar="False"
+        ShowActivated="False"
+        Left="48"
+        Top="160">
+    <Window.Resources>
+        <DropShadowEffect x:Key="SoftShadow"
+                          BlurRadius="10"
+                          ShadowDepth="2"
+                          Opacity="0.18"
+                          Color="#111318" />
+    </Window.Resources>
+
+    <Window.ContextMenu>
+        <ContextMenu>
+            <MenuItem Header="Format with TextRecast" Click="FormatSelectedText_Click" />
+            <Separator />
+            <MenuItem Header="Quit TextRecast" Click="Quit_Click" />
+        </ContextMenu>
+    </Window.ContextMenu>
+
+    <Grid x:Name="LauncherSurface"
+          Width="36"
+          Height="36"
+          Focusable="True"
+          ToolTip="TextRecast selected text"
+          AutomationProperties.Name="TextRecast selected text"
+          AutomationProperties.HelpText="Select text in another app, then click this button to format it."
+          MouseLeftButtonDown="LauncherSurface_MouseLeftButtonDown"
+          MouseMove="LauncherSurface_MouseMove"
+          MouseLeftButtonUp="LauncherSurface_MouseLeftButtonUp"
+          KeyDown="LauncherSurface_KeyDown">
+        <Border CornerRadius="18"
+                Background="#111318"
+                Effect="{StaticResource SoftShadow}">
+            <Border BorderBrush="#3A404A"
+                    BorderThickness="1"
+                    CornerRadius="18"
+                    Padding="1">
+                <Image Width="32"
+                       Height="32"
+                       Source="/Assets/Brand/textrecast-mark.png"
+                       Stretch="Uniform"
+                       SnapsToDevicePixels="True"
+                       RenderOptions.BitmapScalingMode="HighQuality" />
+            </Border>
+        </Border>
+    </Grid>
+</Window>
