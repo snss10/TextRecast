@@ -49,7 +49,7 @@ public sealed class WindowsTextReplacementService : ITextReplacementService
             return TextReplacementResult.Fail("The source window identity changed, so nothing was replaced.");
         }
 
-        var previousClipboard = WindowsClipboard.CaptureSnapshot();
+        var previousClipboard = await WindowsClipboard.CaptureSnapshotAsync(cancellationToken);
         if (!previousClipboard.WasCaptured)
         {
             return TextReplacementResult.Fail("The clipboard is unavailable, so the text was not replaced.");

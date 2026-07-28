@@ -5,6 +5,7 @@ using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using MahApps.Metro.IconPacks;
 using TextRecast.Core.Application.Results;
 using TextRecast.Core.Formatting;
@@ -28,6 +29,7 @@ public partial class ResultWindow : Window
     private SelectionContext? _selection;
     private string? _generatedText;
     private int _contentVersion;
+    private bool _isClosed;
 
     internal ResultWindow(
         string displayText,
@@ -44,6 +46,11 @@ public partial class ResultWindow : Window
 
     internal void UpdateResult(string displayText, SelectionContext? selection)
     {
+        if (_isClosed)
+        {
+            return;
+        }
+
         _contentVersion++;
         CancelOperation();
         CancelSuccessClose();
@@ -63,7 +70,7 @@ public partial class ResultWindow : Window
 
     private async void Apply_Click(object sender, RoutedEventArgs e)
     {
-        if (_selection is null)
+        if (_isClosed || _selection is null)
         {
             return;
         }
@@ -82,7 +89,7 @@ public partial class ResultWindow : Window
             {
                 SetStatus("Replacing selection...", StatusKind.Replacing);
                 var retry = await _retryReplacementAsync(_selection, _generatedText, operationCancellation.Token);
-                if (contentVersion != _contentVersion)
+                if (!IsCurrentContent(contentVersion))
                 {
                     return;
                 }
@@ -98,7 +105,7 @@ public partial class ResultWindow : Window
                 formattingHintCancellation.Token);
             var progress = new Progress<FormatTextStage>(stage =>
             {
-                if (contentVersion == _contentVersion)
+                if (IsCurrentContent(contentVersion))
                 {
                     if (stage == FormatTextStage.Replacing)
                     {
@@ -110,7 +117,7 @@ public partial class ResultWindow : Window
             });
             var outcome = await _applyAsync(_selection, operation, tone, progress, operationCancellation.Token);
             formattingHintCancellation.Cancel();
-            if (contentVersion != _contentVersion)
+            if (!IsCurrentContent(contentVersion))
             {
                 return;
             }
@@ -140,49 +147,49 @@ public partial class ResultWindow : Window
         }
         catch (OperationCanceledException)
         {
-            if (contentVersion == _contentVersion)
+            if (IsCurrentContent(contentVersion))
             {
                 SetStatus("Cancelled", StatusKind.Warning);
             }
         }
         catch (FileNotFoundException)
         {
-            if (contentVersion == _contentVersion)
+            if (IsCurrentContent(contentVersion))
             {
                 SetStatus("Local model file is missing", StatusKind.Error);
             }
         }
         catch (InvalidDataException ex)
         {
-            if (contentVersion == _contentVersion)
+            if (IsCurrentContent(contentVersion))
             {
                 SetStatus(ex.Message, StatusKind.Error);
             }
         }
         catch (TextFormattingException ex)
         {
-            if (contentVersion == _contentVersion)
+            if (IsCurrentContent(contentVersion))
             {
                 SetStatus(ex.Message, StatusKind.Error);
             }
         }
         catch (OutOfMemoryException)
         {
-            if (contentVersion == _contentVersion)
+            if (IsCurrentContent(contentVersion))
             {
                 SetStatus("Not enough memory to run the local model", StatusKind.Error);
             }
         }
         catch (DllNotFoundException)
         {
-            if (contentVersion == _contentVersion)
+            if (IsCurrentContent(contentVersion))
             {
                 SetStatus("The local model runtime is unavailable", StatusKind.Error);
             }
         }
         catch (BadImageFormatException)
         {
-            if (contentVersion == _contentVersion)
+            if (IsCurrentContent(contentVersion))
             {
                 SetStatus("The local model runtime is incompatible", StatusKind.Error);
             }
@@ -191,7 +198,7 @@ public partial class ResultWindow : Window
         {
             System.Diagnostics.Debug.WriteLine(
                 $"Formatting failed with {ex.GetType().FullName}; HResult=0x{ex.HResult:X8}.");
-            if (contentVersion == _contentVersion)
+            if (IsCurrentContent(contentVersion))
             {
                 SetStatus("Formatting failed unexpectedly. Try a smaller selection.", StatusKind.Error);
             }
@@ -215,7 +222,10 @@ public partial class ResultWindow : Window
             if (ReferenceEquals(_operationCancellation, operationCancellation))
             {
                 _operationCancellation = null;
-                SetBusy(false);
+                if (!_isClosed)
+                {
+                    SetBusy(false);
+                }
             }
         }
     }
@@ -272,12 +282,26 @@ public partial class ResultWindow : Window
 
     private void SetBusy(bool isBusy)
     {
+        if (_isClosed)
+        {
+            return;
+        }
+
         var canChangeFormat = !isBusy && _generatedText is null;
         OperationChoices.IsEnabled = canChangeFormat;
         TonePanel.IsEnabled = canChangeFormat;
         CancelButton.Visibility = isBusy ? Visibility.Visible : Visibility.Collapsed;
         ActivityProgressBar.Visibility = isBusy ? Visibility.Visible : Visibility.Collapsed;
         ApplyButton.IsEnabled = !isBusy && _selection is not null;
+
+        if (isBusy)
+        {
+            StartBusyAnimation();
+        }
+        else
+        {
+            StopBusyAnimation();
+        }
     }
 
     private void ShowStage(FormatTextStage stage)
@@ -301,13 +325,13 @@ public partial class ResultWindow : Window
         CancellationToken cancellationToken)
     {
         await Task.Delay(TimeSpan.FromSeconds(8), cancellationToken);
-        if (contentVersion == _contentVersion)
+        if (IsCurrentContent(contentVersion))
         {
             SetStatus("Still formatting locally...", StatusKind.Working);
         }
 
         await Task.Delay(TimeSpan.FromSeconds(17), cancellationToken);
-        if (contentVersion == _contentVersion)
+        if (IsCurrentContent(contentVersion))
         {
             SetStatus("Large selection still formatting - Cancel is available", StatusKind.Working);
         }
@@ -324,6 +348,11 @@ public partial class ResultWindow : Window
 
     private void SetStatus(string message, StatusKind kind)
     {
+        if (_isClosed)
+        {
+            return;
+        }
+
         StatusTextBlock.Text = message;
         StatusIcon.Kind = kind switch
         {
@@ -334,7 +363,8 @@ public partial class ResultWindow : Window
             StatusKind.Error => PackIconLucideKind.CircleX,
             _ => PackIconLucideKind.Circle
         };
-        StatusIcon.Spin = kind == StatusKind.Working;
+        // The footer progress bar is the single animated busy indicator.
+        StatusIcon.Spin = false;
         StatusIcon.Foreground = kind switch
         {
             StatusKind.Working => (Brush)FindResource("AccentBrush"),
@@ -365,13 +395,18 @@ public partial class ResultWindow : Window
 
     private async Task CloseAfterSuccessAsync()
     {
+        if (_isClosed)
+        {
+            return;
+        }
+
         CancelSuccessClose();
         _successCloseCancellation = new CancellationTokenSource();
 
         try
         {
             await Task.Delay(SuccessCloseDelayMilliseconds, _successCloseCancellation.Token);
-            if (IsVisible)
+            if (!_isClosed && IsVisible)
             {
                 Close();
             }
@@ -396,6 +431,42 @@ public partial class ResultWindow : Window
         _successCloseCancellation?.Cancel();
         _successCloseCancellation?.Dispose();
         _successCloseCancellation = null;
+    }
+
+    private bool IsCurrentContent(int contentVersion)
+    {
+        return !_isClosed && contentVersion == _contentVersion;
+    }
+
+    private void StartBusyAnimation()
+    {
+        var animation = new DoubleAnimation
+        {
+            From = -124,
+            To = 250,
+            Duration = TimeSpan.FromSeconds(1.15),
+            RepeatBehavior = RepeatBehavior.Forever
+        };
+        BusyIndicatorTransform.BeginAnimation(
+            TranslateTransform.XProperty,
+            animation,
+            HandoffBehavior.SnapshotAndReplace);
+    }
+
+    private void StopBusyAnimation()
+    {
+        BusyIndicatorTransform.BeginAnimation(TranslateTransform.XProperty, null);
+        BusyIndicatorTransform.X = 0;
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        _isClosed = true;
+        _contentVersion++;
+        CancelOperation();
+        CancelSuccessClose();
+        StopBusyAnimation();
+        base.OnClosed(e);
     }
 
     private void Close_Click(object sender, RoutedEventArgs e)

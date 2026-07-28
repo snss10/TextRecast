@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Security.Principal;
 using System.Windows;
 using TextRecast.App.Presentation;
 using TextRecast.Core.Application;
@@ -11,15 +12,24 @@ namespace TextRecast.App;
 [SuppressMessage(
     "Design",
     "CA1001:Types that own disposable fields should be disposable",
-    Justification = "WPF owns the application lifecycle; OnExit disposes the formatter.")]
+    Justification = "WPF owns the application lifecycle; OnExit releases process-lifetime resources.")]
 public partial class App : global::System.Windows.Application
 {
+    private const string SingleInstanceNamePrefix = @"Local\TextRecast-";
     private LocalSlmTextFormatter? _formatter;
+    private Mutex? _singleInstanceMutex;
+    private bool _ownsSingleInstanceMutex;
 
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+        if (!TryAcquireSingleInstance())
+        {
+            Shutdown();
+            return;
+        }
 
         var modelOptions = SlmModelCatalog.CreateDefault();
         var modelInstaller = new SlmModelInstaller(modelOptions);
@@ -51,6 +61,44 @@ public partial class App : global::System.Windows.Application
     protected override void OnExit(ExitEventArgs e)
     {
         _formatter?.Dispose();
+        ReleaseSingleInstance();
         base.OnExit(e);
+    }
+
+    private bool TryAcquireSingleInstance()
+    {
+        using var identity = WindowsIdentity.GetCurrent();
+        var userSid = identity.User?.Value ?? Environment.UserName;
+        var mutex = new Mutex(
+            initiallyOwned: true,
+            $"{SingleInstanceNamePrefix}{userSid}",
+            out var createdNew);
+
+        if (!createdNew)
+        {
+            mutex.Dispose();
+            return false;
+        }
+
+        _singleInstanceMutex = mutex;
+        _ownsSingleInstanceMutex = true;
+        return true;
+    }
+
+    private void ReleaseSingleInstance()
+    {
+        if (_singleInstanceMutex is null)
+        {
+            return;
+        }
+
+        if (_ownsSingleInstanceMutex)
+        {
+            _singleInstanceMutex.ReleaseMutex();
+            _ownsSingleInstanceMutex = false;
+        }
+
+        _singleInstanceMutex.Dispose();
+        _singleInstanceMutex = null;
     }
 }

@@ -16,6 +16,7 @@ public partial class MainWindow : Window
     private Point? _windowStart;
     private IntPtr _captureTargetWindow;
     private bool _didDrag;
+    private int _captureInProgress;
 
     internal MainWindow(FormatTextWorkflow formatTextWorkflow)
     {
@@ -66,7 +67,11 @@ public partial class MainWindow : Window
         _dragStartScreen = null;
         _windowStart = null;
 
-        if (!_didDrag)
+        if (_didDrag)
+        {
+            KeepLauncherOnTop();
+        }
+        else
         {
             await FormatSelectedTextAsync();
         }
@@ -93,20 +98,32 @@ public partial class MainWindow : Window
         var targetWindow = _captureTargetWindow;
         _captureTargetWindow = IntPtr.Zero;
 
-        var capture = await _formatTextWorkflow.CaptureAsync(targetWindow);
-        if (!capture.Success)
+        if (Interlocked.CompareExchange(ref _captureInProgress, 1, 0) != 0)
         {
-            ShowResult(capture.Message, selection: null);
             return;
         }
 
-        var displayText = capture.Selection!.Text;
-        if (!string.IsNullOrWhiteSpace(capture.Warning))
+        try
         {
-            displayText += $"{Environment.NewLine}{Environment.NewLine}Note: {capture.Warning}";
-        }
+            var capture = await _formatTextWorkflow.CaptureAsync(targetWindow);
+            if (!capture.Success)
+            {
+                ShowResult(capture.Message, selection: null);
+                return;
+            }
 
-        ShowResult(displayText, capture.Selection);
+            var displayText = capture.Selection!.Text;
+            if (!string.IsNullOrWhiteSpace(capture.Warning))
+            {
+                displayText += $"{Environment.NewLine}{Environment.NewLine}Note: {capture.Warning}";
+            }
+
+            ShowResult(displayText, capture.Selection);
+        }
+        finally
+        {
+            Volatile.Write(ref _captureInProgress, 0);
+        }
     }
 
     private void ShowResult(string displayText, SelectionContext? selection)
@@ -143,7 +160,6 @@ public partial class MainWindow : Window
 
         Left = Math.Max(SystemParameters.WorkArea.Left, Math.Min(left, maxLeft));
         Top = Math.Max(SystemParameters.WorkArea.Top, Math.Min(top, maxTop));
-        KeepLauncherOnTop();
     }
 
     private void KeepLauncherOnTop()

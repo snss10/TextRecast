@@ -43,7 +43,7 @@ public sealed class SelectionCaptureService : ISelectionCaptureService
             return SelectionCaptureResult.Ok(CreateSelection(uiAutomationText, targetWindow));
         }
 
-        var previousClipboard = WindowsClipboard.CaptureSnapshot();
+        var previousClipboard = await WindowsClipboard.CaptureSnapshotAsync();
         var previousSequence = NativeMethods.GetClipboardSequence();
 
         if (!NativeMethods.SendCtrlC())
@@ -114,4 +114,5 @@ public sealed class SelectionCaptureService : ISelectionCaptureService
     {
         return $"This selection exceeds the {SelectionLimits.MaximumCharacters:N0}-character safety ceiling.";
     }
+
 }

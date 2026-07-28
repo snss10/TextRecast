@@ -35,3 +35,13 @@ jobs:
 
       - name: Build release
         run: dotnet build TextRecast.slnx -c Release --no-restore
+
+      - name: Publish self-contained application
+        run: dotnet publish src/TextRecast.App/TextRecast.App.csproj -c Release -r win-x64 --self-contained true --no-restore -o artifacts/TextRecast-win-x64
+
+      - name: Upload Windows application
+        uses: actions/upload-artifact@v4
+        with:
+          name: TextRecast-win-x64
+          path: artifacts/TextRecast-win-x64
+          if-no-files-found: error

@@ -10,6 +10,7 @@
     <Description>Local Windows writing assistant for selected text.</Description>
     <TargetFramework>net10.0-windows</TargetFramework>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
     <PlatformTarget>x64</PlatformTarget>
     <UseWPF>true</UseWPF>
     <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>

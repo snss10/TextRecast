@@ -8,9 +8,102 @@
         SizeToContent="Height"
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"
-        Background="#F7F8FA"
+        Background="#F6F7F9"
         ContentRendered="Window_ContentRendered"
         Closing="Window_Closing">
+    <Window.Resources>
+        <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="CanvasBrush" Color="#F6F7F9" />
+        <SolidColorBrush x:Key="InkBrush" Color="#111318" />
+        <SolidColorBrush x:Key="PrimaryHoverBrush" Color="#272A31" />
+        <SolidColorBrush x:Key="SecondaryTextBrush" Color="#667085" />
+        <SolidColorBrush x:Key="DividerBrush" Color="#C7CDD6" />
+        <SolidColorBrush x:Key="TrackBrush" Color="#E1E5EA" />
+
+        <Style x:Key="DownloadProgressBar" TargetType="ProgressBar">
+            <Setter Property="Background" Value="{StaticResource TrackBrush}" />
+            <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ProgressBar">
+                        <Grid ClipToBounds="True">
+                            <Border Background="{TemplateBinding Background}"
+                                    CornerRadius="4" />
+                            <Border x:Name="PART_Track" />
+                            <Border x:Name="PART_Indicator"
+                                    HorizontalAlignment="Left"
+                                    Background="{TemplateBinding Foreground}"
+                                    CornerRadius="4" />
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="DownloadPrimaryButton" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource InkBrush}" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderBrush" Value="{StaticResource InkBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="PrimaryButtonSurface"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="5">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="PrimaryButtonSurface"
+                                        Property="Background"
+                                        Value="{StaticResource PrimaryHoverBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="DownloadSecondaryButton" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
+            <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource DividerBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="SecondaryButtonSurface"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="5">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="SecondaryButtonSurface"
+                                        Property="Background"
+                                        Value="{StaticResource CanvasBrush}" />
+                                <Setter TargetName="SecondaryButtonSurface"
+                                        Property="BorderBrush"
+                                        Value="{StaticResource SecondaryTextBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
     <Grid Margin="30">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -47,7 +140,8 @@
                      Height="10"
                      Margin="0,24,0,0"
                      Minimum="0"
-                     Maximum="100" />
+                     Maximum="100"
+                     Style="{StaticResource DownloadProgressBar}" />
 
         <StackPanel Grid.Row="3" Margin="0,10,0,0">
             <TextBlock x:Name="StatusTextBlock"
@@ -70,11 +164,13 @@
                     Margin="0,0,10,0"
                     Visibility="Collapsed"
                     Content="Retry"
+                    Style="{StaticResource DownloadPrimaryButton}"
                     Click="Retry_Click" />
             <Button x:Name="CancelButton"
                     Width="88"
                     Height="32"
                     Content="Cancel"
+                    Style="{StaticResource DownloadSecondaryButton}"
                     Click="Cancel_Click" />
         </StackPanel>
     </Grid>
