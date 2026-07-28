@@ -54,3 +54,6 @@ Desktop.ini
 # Large local model binaries are downloaded separately.
 Models/*.gguf
 Models/*.partial
+
+# Local documentation drafts and planning notes
+docs/
