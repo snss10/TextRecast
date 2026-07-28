@@ -5,5 +5,6 @@ public sealed record TextReplacementResult(bool Success, string Message, string?
     public static TextReplacementResult Ok(string? warning = null) =>
         new(true, "Replaced in the source application.", warning);
 
-    public static TextReplacementResult Fail(string message) => new(false, message);
+    public static TextReplacementResult Fail(string message, string? warning = null) =>
+        new(false, message, warning);
 }

@@ -15,6 +15,10 @@ public sealed class WindowsTextReplacementService : ITextReplacementService
     private const int MaximumClipboardTimeoutMs = 3_000;
     private const int MinimumPasteSettleDelayMs = 100;
     private const int MaximumPasteSettleDelayMs = 2_000;
+    private const string ClipboardRestorationWarning =
+        "The previous clipboard content could not be restored.";
+    private const string ReplacementClipboardRestorationWarning =
+        "The text was replaced, but the previous clipboard content could not be restored.";
     private static readonly TimeSpan SelectionLifetime = TimeSpan.FromMinutes(15);
     private readonly UiAutomationSelectionReader _selectionReader;
 
@@ -75,19 +79,23 @@ public sealed class WindowsTextReplacementService : ITextReplacementService
         cancellationToken.ThrowIfCancellationRequested();
         if (!await WindowsClipboard.SetTextAsync(replacementText, cancellationToken))
         {
-            await WindowsClipboard.RestoreAsync(previousClipboard);
-            return TextReplacementResult.Fail("Could not prepare the replacement text on the clipboard.");
+            var restoreSucceeded = await WindowsClipboard.RestoreAsync(previousClipboard);
+            return TextReplacementResult.Fail(
+                "Could not prepare the replacement text on the clipboard.",
+                GetRestorationWarning(restoreSucceeded));
         }
 
         if (!NativeMethods.SendCtrlV())
         {
-            await WindowsClipboard.RestoreAsync(previousClipboard);
-            return TextReplacementResult.Fail("Could not paste into the source application.");
+            var restoreSucceeded = await WindowsClipboard.RestoreAsync(previousClipboard);
+            return TextReplacementResult.Fail(
+                "Could not paste into the source application.",
+                GetRestorationWarning(restoreSucceeded));
         }
 
         await Task.Delay(GetPasteSettleDelay(replacementText.Length), CancellationToken.None);
         var restored = await WindowsClipboard.RestoreAsync(previousClipboard);
-        var warning = restored ? null : "The text was replaced, but the previous clipboard content could not be restored.";
+        var warning = restored ? null : ReplacementClipboardRestorationWarning;
         return TextReplacementResult.Ok(warning);
     }
 
@@ -109,26 +117,43 @@ public sealed class WindowsTextReplacementService : ITextReplacementService
                 : TextReplacementResult.Fail("The selection changed, so nothing was replaced.");
         }
 
-        var previousSequence = NativeMethods.GetClipboardSequence();
-        if (!NativeMethods.SendCtrlC() ||
-            !await WaitForClipboardChangeAsync(
-                previousSequence,
-                GetClipboardTimeout(selection.Text.Length),
-                cancellationToken))
+        var selectionMatches = false;
+        var verificationMessage = "The original selection could not be verified.";
+        var restored = false;
+        try
         {
-            await WindowsClipboard.RestoreAsync(previousClipboard);
-            return TextReplacementResult.Fail("The original selection could not be verified.");
+            var previousSequence = NativeMethods.GetClipboardSequence();
+            if (NativeMethods.SendCtrlC() &&
+                await WaitForClipboardChangeAsync(
+                    previousSequence,
+                    GetClipboardTimeout(selection.Text.Length),
+                    cancellationToken))
+            {
+                var currentSelection = await WindowsClipboard.ReadTextAsync(
+                    SelectionLimits.MaximumCharacters,
+                    cancellationToken);
+                selectionMatches = currentSelection.Success &&
+                                   !currentSelection.ExceededLimit &&
+                                   TextMatches(selection.Text, currentSelection.Text);
+                if (!selectionMatches)
+                {
+                    verificationMessage = "The selection changed, so nothing was replaced.";
+                }
+            }
+        }
+        finally
+        {
+            restored = await WindowsClipboard.RestoreAsync(previousClipboard);
         }
 
-        var currentSelection = await WindowsClipboard.ReadTextAsync(
-            SelectionLimits.MaximumCharacters,
-            cancellationToken);
-        await WindowsClipboard.RestoreAsync(previousClipboard);
-        return currentSelection.Success &&
-               !currentSelection.ExceededLimit &&
-               TextMatches(selection.Text, currentSelection.Text)
+        if (!restored)
+        {
+            return TextReplacementResult.Fail(verificationMessage, ClipboardRestorationWarning);
+        }
+
+        return selectionMatches
             ? TextReplacementResult.Ok()
-            : TextReplacementResult.Fail("The selection changed, so nothing was replaced.");
+            : TextReplacementResult.Fail(verificationMessage);
     }
 
     private static bool TextMatches(string expected, string actual)
@@ -162,6 +187,11 @@ public sealed class WindowsTextReplacementService : ITextReplacementService
             MinimumPasteSettleDelayMs,
             MaximumPasteSettleDelayMs);
         return TimeSpan.FromMilliseconds(milliseconds);
+    }
+
+    private static string? GetRestorationWarning(bool restored)
+    {
+        return restored ? null : ClipboardRestorationWarning;
     }
 
     private static async Task<bool> WaitForClipboardChangeAsync(

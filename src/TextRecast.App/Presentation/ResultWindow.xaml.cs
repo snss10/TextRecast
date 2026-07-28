@@ -131,10 +131,7 @@ public partial class ResultWindow : Window
 
             if (outcome.Success)
             {
-                _selection = null;
-                SetBusy(false);
-                SetStatus("Replaced successfully", StatusKind.Success);
-                await CloseAfterSuccessAsync();
+                await ShowSuccessfulReplacementAsync(outcome.Message, outcome.Warning);
             }
             else
             {
@@ -234,14 +231,27 @@ public partial class ResultWindow : Window
     {
         if (result.Success)
         {
-            _selection = null;
-            SetBusy(false);
-            SetStatus("Replaced successfully", StatusKind.Success);
-            await CloseAfterSuccessAsync();
+            await ShowSuccessfulReplacementAsync(result.Message, result.Warning);
             return;
         }
 
         SetStatus(BuildStatus(result.Message, result.Warning), StatusKind.Error);
+    }
+
+    private async Task ShowSuccessfulReplacementAsync(string message, string? warning)
+    {
+        _selection = null;
+        SetBusy(false);
+
+        if (!string.IsNullOrWhiteSpace(warning))
+        {
+            CancelSuccessClose();
+            SetStatus(BuildStatus(message, warning), StatusKind.Warning);
+            return;
+        }
+
+        SetStatus("Replaced successfully", StatusKind.Success);
+        await CloseAfterSuccessAsync();
     }
 
     private static string BuildStatus(string message, string? warning)

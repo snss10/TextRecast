@@ -44,6 +44,12 @@ public sealed class SelectionCaptureService : ISelectionCaptureService
         }
 
         var previousClipboard = await WindowsClipboard.CaptureSnapshotAsync();
+        if (!previousClipboard.WasCaptured)
+        {
+            return SelectionCaptureResult.Fail(
+                "The clipboard is unavailable, so the selected text was not captured.");
+        }
+
         var previousSequence = NativeMethods.GetClipboardSequence();
 
         if (!NativeMethods.SendCtrlC())

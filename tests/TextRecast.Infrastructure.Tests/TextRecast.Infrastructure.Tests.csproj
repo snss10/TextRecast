@@ -4,6 +4,7 @@
     <IsTestProject>true</IsTestProject>
     <IsPackable>false</IsPackable>
     <RootNamespace>TextRecast.Infrastructure.Tests</RootNamespace>
+    <UseWPF>true</UseWPF>
   </PropertyGroup>
 
   <ItemGroup>
