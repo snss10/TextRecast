@@ -11,17 +11,22 @@ namespace TextRecast.Infrastructure.SLM;
 public sealed class SlmModelInstaller
 {
     private const int BufferSize = 1024 * 1024;
+    private const int MaxRetryCount = 3;
     private static readonly TimeSpan ProgressReportInterval = TimeSpan.FromMilliseconds(125);
+    private readonly Func<string, long> _availableDiskSpaceProvider;
     private readonly HttpClient _httpClient;
     private readonly string _packagedModelDirectory;
     private readonly SlmModelProfile _profile;
+    private readonly Func<TimeSpan, CancellationToken, Task> _retryDelayAsync;
     private readonly string _userModelDirectory;
 
     public SlmModelInstaller(
         SlmModelProfile profile,
         HttpClient httpClient,
         string packagedModelDirectory,
-        string userModelDirectory)
+        string userModelDirectory,
+        Func<string, long>? availableDiskSpaceProvider = null,
+        Func<TimeSpan, CancellationToken, Task>? retryDelayAsync = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(packagedModelDirectory);
         ArgumentException.ThrowIfNullOrWhiteSpace(userModelDirectory);
@@ -30,6 +35,8 @@ public sealed class SlmModelInstaller
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         _packagedModelDirectory = packagedModelDirectory;
         _userModelDirectory = userModelDirectory;
+        _availableDiskSpaceProvider = availableDiskSpaceProvider ?? GetAvailableDiskSpace;
+        _retryDelayAsync = retryDelayAsync ?? Task.Delay;
     }
 
     public string PackagedModelPath =>
@@ -58,24 +65,33 @@ public sealed class SlmModelInstaller
     {
         Directory.CreateDirectory(_userModelDirectory);
 
-        var partialState = GetPartialDownloadState();
-        if (partialState?.Length == _profile.ExpectedFileSize)
+        for (var retryCount = 0; ; retryCount++)
         {
             try
             {
-                return await VerifyAndInstallAsync(
-                    progress,
+                return await DownloadOnceAsync(progress, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (
+                IsRetryable(ex) &&
+                retryCount < MaxRetryCount &&
+                !cancellationToken.IsCancellationRequested)
+            {
+                await _retryDelayAsync(
+                    GetRetryDelay(retryCount),
                     cancellationToken).ConfigureAwait(false);
             }
-            catch (InvalidDataException)
-            {
-                ResetPartialDownload();
-                partialState = null;
-            }
         }
+    }
+
+    private async Task<string> DownloadOnceAsync(
+        IProgress<SlmModelDownloadProgress>? progress,
+        CancellationToken cancellationToken)
+    {
+        var partialState = GetPartialDownloadState();
 
         while (true)
         {
+            EnsureSufficientDiskSpace(partialState?.Length ?? 0);
             using var request = CreateDownloadRequest(partialState);
             using var response = await _httpClient.SendAsync(
                 request,
@@ -84,6 +100,14 @@ public sealed class SlmModelInstaller
 
             if (partialState is not null)
             {
+                if (response.StatusCode == HttpStatusCode.RequestedRangeNotSatisfiable &&
+                    IsCompletedRangeResponse(response, partialState))
+                {
+                    return await VerifyAndInstallAsync(
+                        progress,
+                        cancellationToken).ConfigureAwait(false);
+                }
+
                 if (response.StatusCode == HttpStatusCode.PartialContent)
                 {
                     if (!IsValidResumeResponse(response, partialState))
@@ -142,6 +166,29 @@ public sealed class SlmModelInstaller
                 progress,
                 cancellationToken).ConfigureAwait(false);
         }
+    }
+
+    private static bool IsRetryable(Exception exception)
+    {
+        if (exception is IncompleteDownloadException or HttpIOException)
+        {
+            return true;
+        }
+
+        if (exception is not HttpRequestException httpException)
+        {
+            return false;
+        }
+
+        return httpException.StatusCode is null ||
+            httpException.StatusCode == HttpStatusCode.RequestTimeout ||
+            httpException.StatusCode == HttpStatusCode.TooManyRequests ||
+            (int)httpException.StatusCode >= 500;
+    }
+
+    private static TimeSpan GetRetryDelay(int retryCount)
+    {
+        return TimeSpan.FromMilliseconds(250 * (1 << retryCount));
     }
 
     private HttpRequestMessage CreateDownloadRequest(PartialDownloadState? partialState)
@@ -247,6 +294,19 @@ public sealed class SlmModelInstaller
         return HasSameRemoteIdentity(response, partialState.Metadata);
     }
 
+    private bool IsCompletedRangeResponse(
+        HttpResponseMessage response,
+        PartialDownloadState partialState)
+    {
+        var contentRange = response.Content.Headers.ContentRange;
+        return partialState.Length == _profile.ExpectedFileSize &&
+            contentRange is not null &&
+            string.Equals(contentRange.Unit, "bytes", StringComparison.OrdinalIgnoreCase) &&
+            contentRange.From is null &&
+            contentRange.To is null &&
+            contentRange.Length == _profile.ExpectedFileSize;
+    }
+
     private static bool HasSameRemoteIdentity(
         HttpResponseMessage response,
         PartialDownloadMetadata metadata)
@@ -347,9 +407,19 @@ public sealed class SlmModelInstaller
         }
 
         await destination.FlushAsync(cancellationToken).ConfigureAwait(false);
-        if (!HasExpectedSize(PartialModelPath))
+        destination.Close();
+
+        var actualLength = new FileInfo(PartialModelPath).Length;
+        if (actualLength > _profile.ExpectedFileSize)
         {
+            ResetPartialDownload();
             throw new InvalidDataException(
+                "The downloaded model has an unexpected file size. Please try again.");
+        }
+
+        if (actualLength < _profile.ExpectedFileSize)
+        {
+            throw new IncompleteDownloadException(
                 "The downloaded model is incomplete. Check your connection and try again.");
         }
     }
@@ -362,7 +432,16 @@ public sealed class SlmModelInstaller
             _profile.ExpectedFileSize,
             _profile.ExpectedFileSize,
             SlmModelInstallationStage.Verifying));
-        await VerifyHashAsync(PartialModelPath, cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await VerifyHashAsync(PartialModelPath, cancellationToken).ConfigureAwait(false);
+        }
+        catch (InvalidDataException)
+        {
+            ResetPartialDownload();
+            throw;
+        }
+
         File.Move(PartialModelPath, UserModelPath, overwrite: true);
         TryDeleteFile(PartialMetadataPath);
         return UserModelPath;
@@ -398,6 +477,28 @@ public sealed class SlmModelInstaller
         TryDeleteFile(PartialMetadataPath);
     }
 
+    private void EnsureSufficientDiskSpace(long existingPartialBytes)
+    {
+        var requiredBytes = _profile.ExpectedFileSize - existingPartialBytes;
+        var availableBytes = _availableDiskSpaceProvider(_userModelDirectory);
+        if (availableBytes < requiredBytes)
+        {
+            throw new IOException(
+                "There is not enough free disk space to download the local model.");
+        }
+    }
+
+    private static long GetAvailableDiskSpace(string directory)
+    {
+        var root = Path.GetPathRoot(Path.GetFullPath(directory));
+        if (string.IsNullOrWhiteSpace(root))
+        {
+            throw new IOException("The model storage drive could not be determined.");
+        }
+
+        return new DriveInfo(root).AvailableFreeSpace;
+    }
+
     private static void TryDeleteFile(string path)
     {
         try
@@ -421,6 +522,8 @@ public sealed class SlmModelInstaller
         long ExpectedFileSize,
         string? EntityTag,
         DateTimeOffset? LastModified);
+
+    private sealed class IncompleteDownloadException(string message) : IOException(message);
 }
 
 public enum SlmModelInstallationStage

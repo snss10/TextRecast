@@ -247,6 +247,231 @@ public sealed class SlmModelInstallerTests
         }
     }
 
+    [TestMethod]
+    public async Task DownloadAsyncRetriesTemporaryHttpStatuses()
+    {
+        var modelBytes = CreateModelBytes();
+        var testRoot = CreateTestDirectory();
+        try
+        {
+            var delays = new List<TimeSpan>();
+            var handler = new RecordingHttpMessageHandler(
+                () => CreateStatusResponse(HttpStatusCode.RequestTimeout),
+                () => CreateStatusResponse(HttpStatusCode.TooManyRequests),
+                () => CreateStatusResponse(HttpStatusCode.ServiceUnavailable),
+                () => CreateFullResponse(modelBytes, Version1EntityTag));
+            using var client = new HttpClient(handler);
+            var installer = CreateInstaller(
+                modelBytes,
+                client,
+                testRoot,
+                retryDelayAsync: (delay, _) =>
+                {
+                    delays.Add(delay);
+                    return Task.CompletedTask;
+                });
+
+            var installedPath = await installer.DownloadAsync(null, CancellationToken.None);
+
+            CollectionAssert.AreEqual(modelBytes, await File.ReadAllBytesAsync(installedPath));
+            Assert.AreEqual(4, handler.Requests.Count);
+            CollectionAssert.AreEqual(
+                new[]
+                {
+                    TimeSpan.FromMilliseconds(250),
+                    TimeSpan.FromMilliseconds(500),
+                    TimeSpan.FromMilliseconds(1000)
+                },
+                delays);
+        }
+        finally
+        {
+            Directory.Delete(testRoot, recursive: true);
+        }
+    }
+
+    [TestMethod]
+    public async Task DownloadAsyncResumesAutomaticTransportRetry()
+    {
+        var modelBytes = CreateModelBytes();
+        var testRoot = CreateTestDirectory();
+        try
+        {
+            var handler = new RecordingHttpMessageHandler(
+                () => CreateInterruptedResponse(
+                    modelBytes,
+                    Version1EntityTag,
+                    new HttpRequestException("Connection interrupted.")),
+                () => CreatePartialResponse(
+                    modelBytes,
+                    ResumeOffset,
+                    Version1EntityTag));
+            using var client = new HttpClient(handler);
+            var installer = CreateInstaller(modelBytes, client, testRoot);
+
+            var installedPath = await installer.DownloadAsync(null, CancellationToken.None);
+
+            CollectionAssert.AreEqual(modelBytes, await File.ReadAllBytesAsync(installedPath));
+            Assert.AreEqual(2, handler.Requests.Count);
+            AssertResumeRequest(handler.Requests[1]);
+        }
+        finally
+        {
+            Directory.Delete(testRoot, recursive: true);
+        }
+    }
+
+    [TestMethod]
+    public async Task DownloadAsyncEnforcesRetryLimit()
+    {
+        var modelBytes = CreateModelBytes();
+        var testRoot = CreateTestDirectory();
+        try
+        {
+            var delayCount = 0;
+            var handler = new RecordingHttpMessageHandler(
+                () => CreateStatusResponse(HttpStatusCode.ServiceUnavailable),
+                () => CreateStatusResponse(HttpStatusCode.ServiceUnavailable),
+                () => CreateStatusResponse(HttpStatusCode.ServiceUnavailable),
+                () => CreateStatusResponse(HttpStatusCode.ServiceUnavailable));
+            using var client = new HttpClient(handler);
+            var installer = CreateInstaller(
+                modelBytes,
+                client,
+                testRoot,
+                retryDelayAsync: (_, _) =>
+                {
+                    delayCount++;
+                    return Task.CompletedTask;
+                });
+
+            await Assert.ThrowsExactlyAsync<HttpRequestException>(
+                () => installer.DownloadAsync(null, CancellationToken.None));
+
+            Assert.AreEqual(4, handler.Requests.Count);
+            Assert.AreEqual(3, delayCount);
+        }
+        finally
+        {
+            Directory.Delete(testRoot, recursive: true);
+        }
+    }
+
+    [TestMethod]
+    public async Task DownloadAsyncRejectsInsufficientDiskSpace()
+    {
+        var modelBytes = CreateModelBytes();
+        var testRoot = CreateTestDirectory();
+        try
+        {
+            var handler = new RecordingHttpMessageHandler();
+            using var client = new HttpClient(handler);
+            var installer = CreateInstaller(
+                modelBytes,
+                client,
+                testRoot,
+                availableDiskSpaceProvider: _ => modelBytes.LongLength - 1);
+
+            await Assert.ThrowsExactlyAsync<IOException>(
+                () => installer.DownloadAsync(null, CancellationToken.None));
+
+            Assert.AreEqual(0, handler.Requests.Count);
+        }
+        finally
+        {
+            Directory.Delete(testRoot, recursive: true);
+        }
+    }
+
+    [TestMethod]
+    public async Task DownloadAsyncRejectsIncorrectResponseSize()
+    {
+        var modelBytes = CreateModelBytes();
+        var testRoot = CreateTestDirectory();
+        try
+        {
+            var handler = new RecordingHttpMessageHandler(
+                () => CreateFullResponse(modelBytes[..^1], Version1EntityTag));
+            using var client = new HttpClient(handler);
+            var installer = CreateInstaller(modelBytes, client, testRoot);
+
+            await Assert.ThrowsExactlyAsync<InvalidDataException>(
+                () => installer.DownloadAsync(null, CancellationToken.None));
+
+            Assert.IsFalse(File.Exists(installer.PartialModelPath));
+            Assert.IsFalse(File.Exists(installer.PartialMetadataPath));
+        }
+        finally
+        {
+            Directory.Delete(testRoot, recursive: true);
+        }
+    }
+
+    [TestMethod]
+    public async Task DownloadAsyncDeletesPartialFilesAfterHashFailure()
+    {
+        var modelBytes = CreateModelBytes();
+        var testRoot = CreateTestDirectory();
+        try
+        {
+            var handler = new RecordingHttpMessageHandler(
+                () => CreateFullResponse(modelBytes, Version1EntityTag));
+            using var client = new HttpClient(handler);
+            var invalidProfile = CreateProfile(modelBytes) with
+            {
+                ExpectedSha256 = new string('0', 64)
+            };
+            var installer = CreateInstaller(
+                modelBytes,
+                client,
+                testRoot,
+                profile: invalidProfile);
+
+            await Assert.ThrowsExactlyAsync<InvalidDataException>(
+                () => installer.DownloadAsync(null, CancellationToken.None));
+
+            Assert.IsFalse(File.Exists(installer.UserModelPath));
+            Assert.IsFalse(File.Exists(installer.PartialModelPath));
+            Assert.IsFalse(File.Exists(installer.PartialMetadataPath));
+        }
+        finally
+        {
+            Directory.Delete(testRoot, recursive: true);
+        }
+    }
+
+    [TestMethod]
+    public async Task DownloadAsyncVerifiesCompletedPartialAfterRangeNotSatisfiable()
+    {
+        var modelBytes = CreateModelBytes();
+        var testRoot = CreateTestDirectory();
+        try
+        {
+            var handler = new RecordingHttpMessageHandler(
+                () => CreateInterruptedResponse(
+                    modelBytes,
+                    Version1EntityTag,
+                    new HttpRequestException("Connection interrupted."),
+                    bytesBeforeInterruption: modelBytes.Length),
+                () => CreateRangeNotSatisfiableResponse(
+                    modelBytes.LongLength,
+                    Version1EntityTag));
+            using var client = new HttpClient(handler);
+            var installer = CreateInstaller(modelBytes, client, testRoot);
+
+            var installedPath = await installer.DownloadAsync(null, CancellationToken.None);
+
+            CollectionAssert.AreEqual(modelBytes, await File.ReadAllBytesAsync(installedPath));
+            Assert.AreEqual(modelBytes.LongLength, handler.Requests[1].RangeStart);
+            Assert.AreEqual(Version1EntityTag, handler.Requests[1].IfRange);
+            Assert.IsFalse(File.Exists(installer.PartialModelPath));
+        }
+        finally
+        {
+            Directory.Delete(testRoot, recursive: true);
+        }
+    }
+
     private static byte[] CreateModelBytes()
     {
         return new byte[] { 10, 20, 30, 40, 50, 60, 70, 80 };
@@ -255,13 +480,18 @@ public sealed class SlmModelInstallerTests
     private static SlmModelInstaller CreateInstaller(
         byte[] modelBytes,
         HttpClient client,
-        string testRoot)
+        string testRoot,
+        SlmModelProfile? profile = null,
+        Func<string, long>? availableDiskSpaceProvider = null,
+        Func<TimeSpan, CancellationToken, Task>? retryDelayAsync = null)
     {
         return new SlmModelInstaller(
-            CreateProfile(modelBytes),
+            profile ?? CreateProfile(modelBytes),
             client,
             Path.Combine(testRoot, "packaged"),
-            Path.Combine(testRoot, "user"));
+            Path.Combine(testRoot, "user"),
+            availableDiskSpaceProvider ?? (_ => long.MaxValue),
+            retryDelayAsync ?? ((_, _) => Task.CompletedTask));
     }
 
     private static string CreateTestDirectory()
@@ -312,16 +542,37 @@ public sealed class SlmModelInstallerTests
     private static HttpResponseMessage CreateInterruptedResponse(
         byte[] modelBytes,
         string entityTag,
-        IOException exception)
+        Exception exception,
+        int bytesBeforeInterruption = ResumeOffset)
     {
         var stream = new InterruptingReadStream(
             modelBytes,
-            ResumeOffset,
+            bytesBeforeInterruption,
             exception,
             cancellation: null);
         var content = new StreamContent(stream);
         content.Headers.ContentLength = modelBytes.LongLength;
         return CreateResponse(HttpStatusCode.OK, content, entityTag);
+    }
+
+    private static HttpResponseMessage CreateStatusResponse(HttpStatusCode statusCode)
+    {
+        return CreateResponse(
+            statusCode,
+            new ByteArrayContent([]),
+            Version1EntityTag);
+    }
+
+    private static HttpResponseMessage CreateRangeNotSatisfiableResponse(
+        long expectedFileSize,
+        string entityTag)
+    {
+        var content = new ByteArrayContent([]);
+        content.Headers.ContentRange = new ContentRangeHeaderValue(expectedFileSize);
+        return CreateResponse(
+            HttpStatusCode.RequestedRangeNotSatisfiable,
+            content,
+            entityTag);
     }
 
     private static HttpResponseMessage CreateCancelledResponse(
@@ -397,7 +648,7 @@ public sealed class SlmModelInstallerTests
     private sealed class InterruptingReadStream(
         byte[] modelBytes,
         int bytesBeforeInterruption,
-        IOException? failure,
+        Exception? failure,
         CancellationTokenSource? cancellation) : Stream
     {
         private int _position;
