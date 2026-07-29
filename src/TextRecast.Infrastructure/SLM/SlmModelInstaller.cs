@@ -9,22 +9,22 @@ public sealed class SlmModelInstaller
 {
     private static readonly TimeSpan ProgressReportInterval = TimeSpan.FromMilliseconds(125);
     private static readonly HttpClient HttpClient = CreateHttpClient();
-    private readonly SlmModelOptions _options;
+    private readonly SlmModelProfile _profile;
 
-    public SlmModelInstaller(SlmModelOptions options)
+    public SlmModelInstaller(SlmModelProfile profile)
     {
-        _options = options;
+        _profile = profile;
     }
 
     public string PackagedModelPath =>
-        Path.Combine(AppContext.BaseDirectory, "Models", _options.ModelFileName);
+        Path.Combine(AppContext.BaseDirectory, "Models", _profile.FileName);
 
     public string UserModelPath =>
         Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "TextRecast",
             "Models",
-            _options.ModelFileName);
+            _profile.FileName);
 
     public string? FindInstalledModel()
     {
@@ -46,18 +46,18 @@ public sealed class SlmModelInstaller
 
         var partialPath = Path.Combine(
             destinationDirectory,
-            $"{_options.ModelFileName}.{Guid.NewGuid():N}.partial");
+            $"{_profile.FileName}.{Guid.NewGuid():N}.partial");
 
         try
         {
             using var response = await HttpClient.GetAsync(
-                _options.DownloadUri,
+                _profile.DownloadUri,
                 HttpCompletionOption.ResponseHeadersRead,
                 cancellationToken).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
             var reportedLength = response.Content.Headers.ContentLength;
-            if (reportedLength is long length && length != _options.ExpectedModelFileSize)
+            if (reportedLength is long length && length != _profile.ExpectedFileSize)
             {
                 throw new InvalidDataException(
                     "The model server returned an unexpected file size. Please try again later.");
@@ -76,7 +76,7 @@ public sealed class SlmModelInstaller
 
             var buffer = new byte[1024 * 1024];
             var progressTimer = Stopwatch.StartNew();
-            var totalBytes = reportedLength ?? _options.ExpectedModelFileSize;
+            var totalBytes = reportedLength ?? _profile.ExpectedFileSize;
             long downloaded = 0;
             long lastReportedBytes = -1;
             while (true)
@@ -132,7 +132,7 @@ public sealed class SlmModelInstaller
 
     private bool HasExpectedSize(string path)
     {
-        return File.Exists(path) && new FileInfo(path).Length == _options.ExpectedModelFileSize;
+        return File.Exists(path) && new FileInfo(path).Length == _profile.ExpectedFileSize;
     }
 
     private async Task VerifyHashAsync(string path, CancellationToken cancellationToken)
@@ -147,7 +147,7 @@ public sealed class SlmModelInstaller
         var hash = await SHA256
             .HashDataAsync(stream, cancellationToken)
             .ConfigureAwait(false);
-        if (!Convert.ToHexStringLower(hash).Equals(_options.ExpectedModelSha256, StringComparison.Ordinal))
+        if (!Convert.ToHexStringLower(hash).Equals(_profile.ExpectedSha256, StringComparison.Ordinal))
         {
             throw new InvalidDataException(
                 "The downloaded model failed its integrity check. Please try again.");

@@ -31,8 +31,8 @@ public partial class App : global::System.Windows.Application
             return;
         }
 
-        var modelOptions = SlmModelCatalog.CreateDefault();
-        var modelInstaller = new SlmModelInstaller(modelOptions);
+        var modelProfile = SlmModelCatalog.Default;
+        var modelInstaller = new SlmModelInstaller(modelProfile);
         var modelPath = modelInstaller.FindInstalledModel();
         if (modelPath is null)
         {
@@ -50,7 +50,11 @@ public partial class App : global::System.Windows.Application
         var selectionReader = new UiAutomationSelectionReader();
         var selectionCapture = new SelectionCaptureService(selectionReader);
         var replacement = new WindowsTextReplacementService(selectionReader);
-        _formatter = new LocalSlmTextFormatter(modelOptions with { ModelPath = modelPath });
+        _formatter = new LocalSlmTextFormatter(new SlmModelOptions
+        {
+            Profile = modelProfile,
+            ModelPath = modelPath
+        });
         var workflow = new FormatTextWorkflow(selectionCapture, _formatter, replacement);
 
         MainWindow = new MainWindow(workflow);
