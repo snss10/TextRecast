@@ -3,6 +3,7 @@ name: Build
 on:
   push:
     branches: [main]
+    tags: ["v*.*.*"]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -13,7 +14,7 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - name: Check out repository
@@ -23,6 +24,34 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
+
+      - name: Resolve package version
+        id: version
+        shell: pwsh
+        env:
+          REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+        run: |
+          [xml] $props = Get-Content -Raw Directory.Build.props
+          $projectVersion = [string] $props.Project.PropertyGroup.Version
+          if ([string]::IsNullOrWhiteSpace($projectVersion)) {
+            throw "Directory.Build.props does not define Version."
+          }
+
+          $version = $projectVersion
+          if ($env:REF_TYPE -eq "tag") {
+            if ($env:REF_NAME -notmatch '^v(?<version>\d+\.\d+\.\d+)$') {
+              throw "Release tags must use the vMAJOR.MINOR.PATCH format."
+            }
+
+            $version = $Matches.version
+            if ($version -ne $projectVersion) {
+              throw "Tag version $version does not match project version $projectVersion."
+            }
+          }
+
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "package_name=TextRecast-v$version-win-x64" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
       - name: Restore dependencies
         run: dotnet restore TextRecast.slnx
@@ -37,11 +66,53 @@ jobs:
         run: dotnet build TextRecast.slnx -c Release --no-restore
 
       - name: Publish self-contained application
-        run: dotnet publish src/TextRecast.App/TextRecast.App.csproj -c Release -r win-x64 --self-contained true --no-restore -o artifacts/TextRecast-win-x64
+        run: >-
+          dotnet publish src/TextRecast.App/TextRecast.App.csproj
+          -c Release
+          -r win-x64
+          --self-contained true
+          --no-restore
+          -p:Version=${{ steps.version.outputs.version }}
+          -o artifacts/publish/TextRecast-win-x64
 
-      - name: Upload Windows application
+      - name: Create versioned release package
+        shell: pwsh
+        env:
+          PACKAGE_NAME: ${{ steps.version.outputs.package_name }}
+        run: |
+          $publishDirectory = (Resolve-Path "artifacts/publish/TextRecast-win-x64").Path
+          $releaseDirectory = Join-Path $PWD "artifacts/release"
+          New-Item -ItemType Directory -Path $releaseDirectory -Force | Out-Null
+
+          $requiredFiles = @(
+            "TextRecast.exe",
+            "LICENSE",
+            "NOTICE",
+            "THIRD-PARTY-NOTICES.md"
+          )
+          foreach ($file in $requiredFiles) {
+            if (-not (Test-Path -LiteralPath (Join-Path $publishDirectory $file) -PathType Leaf)) {
+              throw "Published application is missing required file: $file"
+            }
+          }
+
+          $modelFiles = @(Get-ChildItem -Path $publishDirectory -Filter "*.gguf" -File -Recurse)
+          if ($modelFiles.Count -ne 0) {
+            throw "Release packages must not contain GGUF model files."
+          }
+
+          $archiveFileName = "$env:PACKAGE_NAME.zip"
+          $archivePath = Join-Path $releaseDirectory $archiveFileName
+          Compress-Archive -Path (Join-Path $publishDirectory "*") -DestinationPath $archivePath -Force
+
+          $checksum = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+          Set-Content -LiteralPath "$archivePath.sha256" -Value "$checksum  $archiveFileName" -NoNewline
+
+      - name: Upload Windows release package
         uses: actions/upload-artifact@v4
         with:
-          name: TextRecast-win-x64
-          path: artifacts/TextRecast-win-x64
+          name: ${{ steps.version.outputs.package_name }}
+          path: |
+            artifacts/release/${{ steps.version.outputs.package_name }}.zip
+            artifacts/release/${{ steps.version.outputs.package_name }}.zip.sha256
           if-no-files-found: error
