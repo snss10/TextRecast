@@ -34,6 +34,7 @@ Inference runs locally through LLamaSharp's CPU backend. The default model is Qw
 - Change tone to Professional, Casual, Friendly, Formal, or Direct
 - Work in browsers, editors, messaging apps, and other Windows applications
 - Run formatting locally without an account or API key
+- Resume an interrupted model download instead of starting over
 - Cancel an active generation and retry a failed replacement
 - Revalidate the source window and selected text before replacing anything
 
@@ -50,15 +51,18 @@ The published Windows x64 application is self-contained. Users running that buil
 
 ### Run a published build
 
-1. Download the complete Windows x64 archive from the [Releases page](https://github.com/snss10/TextRecast/releases).
-2. Extract the entire archive to a folder.
-3. Run `TextRecast.exe`.
+1. Download `TextRecast-v0.1.1-win-x64.zip` from the [Releases page](https://github.com/snss10/TextRecast/releases).
+2. Optionally verify it with the accompanying `.zip.sha256` file.
+3. Extract the entire archive to a folder.
+4. Run `TextRecast.exe`.
 
 Keep every file from the archive together; the application depends on the included .NET runtime and native inference libraries. If a packaged release is not available yet, follow [Build from source](#build-from-source).
 
 ## First launch and model download
 
-When no valid packaged or previously installed model is available, TextRecast downloads the 1.1 GB Qwen model on first launch. It shows download and verification progress and lets you cancel or retry. The model is written to a temporary file and is installed only after its file size and SHA-256 checksum are verified.
+When no valid packaged or previously installed model is available, TextRecast downloads the 1.1 GB Qwen model on first launch. The setup window shows transferred size, speed, estimated time remaining, verification, and installation status.
+
+Cancelling or losing the connection keeps a validated partial download. Select **Retry** on the same computer to continue from the saved point. TextRecast restarts safely if the server no longer accepts the saved range or the remote file has changed. A model becomes active only after its exact size and SHA-256 checksum pass verification.
 
 The first formatting request loads the model into memory. Later requests reuse the loaded model and usually start faster.
 
@@ -150,7 +154,7 @@ Install the latest x64 package from Microsoft's [supported Visual C++ Redistribu
 <details>
 <summary><strong>The model download or integrity check failed</strong></summary>
 
-Check the internet connection and available disk space, then restart TextRecast and retry. A failed or cancelled partial download is not installed. Offline setup details and the expected checksum are in [Models/README.md](Models/README.md).
+Check the internet connection and available disk space, then retry. TextRecast keeps a safe partial download after cancellation or a temporary network failure and resumes it automatically. Invalid partial data is discarded instead of being installed. Offline setup details and the expected checksum are in [Models/README.md](Models/README.md).
 </details>
 
 <details>
@@ -189,6 +193,8 @@ dotnet publish src/TextRecast.App/TextRecast.App.csproj -c Release -r win-x64 --
 ```
 
 Distribute the complete output folder, not only the executable. The exact cataloged GGUF file documented in [Models/README.md](Models/README.md) is packaged when it is placed in the repository's `Models` directory before publishing; otherwise TextRecast downloads the model for the current user on first launch.
+
+For tagged releases, GitHub Actions creates a model-free `TextRecast-vX.Y.Z-win-x64.zip` containing the complete runtime and legal notices, plus a matching SHA-256 file. A release tag must use `vMAJOR.MINOR.PATCH` and match the version in `Directory.Build.props`.
 
 ## Project layout
 
