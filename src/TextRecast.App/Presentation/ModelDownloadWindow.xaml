@@ -3,175 +3,228 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Set up TextRecast"
         Icon="/Assets/Brand/textrecast-icon.png"
-        Width="460"
-        MinHeight="330"
+        Width="520"
+        MinWidth="460"
+        MinHeight="380"
+        MaxHeight="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Height}"
         SizeToContent="Height"
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"
         Background="#F6F7F9"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
         ContentRendered="Window_ContentRendered"
         Closing="Window_Closing">
-    <Window.Resources>
-        <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />
-        <SolidColorBrush x:Key="CanvasBrush" Color="#F6F7F9" />
-        <SolidColorBrush x:Key="InkBrush" Color="#111318" />
-        <SolidColorBrush x:Key="PrimaryHoverBrush" Color="#272A31" />
-        <SolidColorBrush x:Key="SecondaryTextBrush" Color="#667085" />
-        <SolidColorBrush x:Key="DividerBrush" Color="#C7CDD6" />
-        <SolidColorBrush x:Key="TrackBrush" Color="#E1E5EA" />
+  <Window.Resources>
+    <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="CanvasBrush" Color="#F6F7F9" />
+    <SolidColorBrush x:Key="InkBrush" Color="#111318" />
+    <SolidColorBrush x:Key="PrimaryHoverBrush" Color="#272A31" />
+    <SolidColorBrush x:Key="SecondaryTextBrush" Color="#667085" />
+    <SolidColorBrush x:Key="DividerBrush" Color="#C7CDD6" />
+    <SolidColorBrush x:Key="TrackBrush" Color="#E1E5EA" />
+    <SolidColorBrush x:Key="FooterBrush" Color="#EEF1F5" />
 
-        <Style x:Key="DownloadProgressBar" TargetType="ProgressBar">
-            <Setter Property="Background" Value="{StaticResource TrackBrush}" />
-            <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ProgressBar">
-                        <Grid ClipToBounds="True">
-                            <Border Background="{TemplateBinding Background}"
-                                    CornerRadius="4" />
-                            <Border x:Name="PART_Track" />
-                            <Border x:Name="PART_Indicator"
-                                    HorizontalAlignment="Left"
-                                    Background="{TemplateBinding Foreground}"
-                                    CornerRadius="4" />
-                        </Grid>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+    <Style x:Key="DownloadProgressBar" TargetType="ProgressBar">
+      <Setter Property="Background" Value="{StaticResource TrackBrush}" />
+      <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ProgressBar">
+            <Grid ClipToBounds="True">
+              <Border Background="{TemplateBinding Background}"
+                      CornerRadius="4" />
+              <Border x:Name="PART_Track" />
+              <Border x:Name="PART_Indicator"
+                      HorizontalAlignment="Left"
+                      Background="{TemplateBinding Foreground}"
+                      CornerRadius="4" />
+            </Grid>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
 
-        <Style x:Key="DownloadPrimaryButton" TargetType="Button">
-            <Setter Property="Background" Value="{StaticResource InkBrush}" />
-            <Setter Property="Foreground" Value="White" />
-            <Setter Property="BorderBrush" Value="{StaticResource InkBrush}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="PrimaryButtonSurface"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="5">
-                            <ContentPresenter HorizontalAlignment="Center"
-                                              VerticalAlignment="Center" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="PrimaryButtonSurface"
-                                        Property="Background"
-                                        Value="{StaticResource PrimaryHoverBrush}" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+    <Style x:Key="DownloadPrimaryButton" TargetType="Button">
+      <Setter Property="MinWidth" Value="92" />
+      <Setter Property="Height" Value="34" />
+      <Setter Property="Padding" Value="16,0" />
+      <Setter Property="Background" Value="{StaticResource InkBrush}" />
+      <Setter Property="Foreground" Value="White" />
+      <Setter Property="BorderBrush" Value="{StaticResource InkBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="PrimaryButtonSurface"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="5">
+              <ContentPresenter HorizontalAlignment="Center"
+                                VerticalAlignment="Center" />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="PrimaryButtonSurface"
+                        Property="Background"
+                        Value="{StaticResource PrimaryHoverBrush}" />
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Opacity" Value="0.55" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
 
-        <Style x:Key="DownloadSecondaryButton" TargetType="Button">
-            <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
-            <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
-            <Setter Property="BorderBrush" Value="{StaticResource DividerBrush}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="SecondaryButtonSurface"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="5">
-                            <ContentPresenter HorizontalAlignment="Center"
-                                              VerticalAlignment="Center" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="SecondaryButtonSurface"
-                                        Property="Background"
-                                        Value="{StaticResource CanvasBrush}" />
-                                <Setter TargetName="SecondaryButtonSurface"
-                                        Property="BorderBrush"
-                                        Value="{StaticResource SecondaryTextBrush}" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-    </Window.Resources>
+    <Style x:Key="DownloadSecondaryButton" TargetType="Button">
+      <Setter Property="MinWidth" Value="92" />
+      <Setter Property="Height" Value="34" />
+      <Setter Property="Padding" Value="16,0" />
+      <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
+      <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource DividerBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="SecondaryButtonSurface"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="5">
+              <ContentPresenter HorizontalAlignment="Center"
+                                VerticalAlignment="Center" />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="SecondaryButtonSurface"
+                        Property="Background"
+                        Value="{StaticResource CanvasBrush}" />
+                <Setter TargetName="SecondaryButtonSurface"
+                        Property="BorderBrush"
+                        Value="{StaticResource SecondaryTextBrush}" />
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Opacity" Value="0.55" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+  </Window.Resources>
 
-    <Grid Margin="30">
+  <Grid MinHeight="340">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+      <RowDefinition Height="Auto" />
+    </Grid.RowDefinitions>
+
+    <Border Grid.Row="0"
+            Padding="28,22"
+            Background="{StaticResource SurfaceBrush}"
+            BorderBrush="{StaticResource DividerBrush}"
+            BorderThickness="0,0,0,1">
+      <StackPanel Orientation="Horizontal">
+        <Image Width="48"
+               Height="48"
+               Margin="0,0,16,0"
+               Source="/Assets/Brand/textrecast-icon.png"
+               RenderOptions.BitmapScalingMode="HighQuality" />
+        <StackPanel VerticalAlignment="Center">
+          <TextBlock FontSize="22"
+                     FontWeight="SemiBold"
+                     Foreground="{StaticResource InkBrush}"
+                     Text="Preparing TextRecast" />
+          <TextBlock Margin="0,4,0,0"
+                     Foreground="{StaticResource SecondaryTextBrush}"
+                     Text="One-time private model setup" />
+        </StackPanel>
+      </StackPanel>
+    </Border>
+
+    <ScrollViewer Grid.Row="1"
+                  VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled"
+                  Focusable="False">
+      <Grid Margin="28,24">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <StackPanel Orientation="Horizontal">
-            <Image Width="52"
-                   Height="52"
-                   Margin="0,0,16,0"
-                   Source="/Assets/Brand/textrecast-icon.png" />
-            <StackPanel VerticalAlignment="Center">
-                <TextBlock FontSize="22"
-                           FontWeight="SemiBold"
-                           Foreground="#111318"
-                           Text="Preparing TextRecast" />
-                <TextBlock Margin="0,4,0,0"
-                           Foreground="#5D6470"
-                           Text="One-time local model download" />
-            </StackPanel>
-        </StackPanel>
-
-        <TextBlock Grid.Row="1"
-                   Margin="0,24,0,0"
-                   Foreground="#303641"
+        <TextBlock Foreground="#303641"
                    TextWrapping="Wrap"
-                   Text="TextRecast needs a 1.1 GB local language model. It will be stored on this computer and used privately for formatting." />
+                   LineHeight="21"
+                   Text="TextRecast needs a 1.1 GB local language model. It stays on this computer and is used privately for formatting." />
 
         <ProgressBar x:Name="DownloadProgressBar"
-                     Grid.Row="2"
+                     Grid.Row="1"
                      Height="10"
                      Margin="0,24,0,0"
                      Minimum="0"
                      Maximum="100"
+                     AutomationProperties.Name="Model download progress"
                      Style="{StaticResource DownloadProgressBar}" />
 
-        <StackPanel Grid.Row="3" Margin="0,10,0,0">
+        <Border Grid.Row="2"
+                MinHeight="76"
+                Margin="0,14,0,0"
+                Padding="14,12"
+                Background="{StaticResource SurfaceBrush}"
+                BorderBrush="{StaticResource DividerBrush}"
+                BorderThickness="1"
+                CornerRadius="6">
+          <StackPanel>
             <TextBlock x:Name="StatusTextBlock"
-                       Foreground="#303641"
+                       Foreground="{StaticResource InkBrush}"
+                       FontWeight="SemiBold"
+                       TextWrapping="Wrap"
+                       AutomationProperties.LiveSetting="Polite"
                        Text="Starting download..." />
             <TextBlock x:Name="DetailsTextBlock"
-                       Margin="0,5,0,0"
-                       Foreground="#6E7681"
+                       MinHeight="30"
+                       Margin="0,6,0,0"
+                       Foreground="{StaticResource SecondaryTextBrush}"
                        FontSize="11"
+                       LineHeight="17"
+                       TextWrapping="Wrap"
+                       AutomationProperties.LiveSetting="Polite"
                        Text="Keep TextRecast open while the model downloads." />
-        </StackPanel>
+          </StackPanel>
+        </Border>
+      </Grid>
+    </ScrollViewer>
 
-        <StackPanel Grid.Row="4"
-                    Margin="0,24,0,0"
-                    HorizontalAlignment="Right"
-                    Orientation="Horizontal">
-            <Button x:Name="RetryButton"
-                    Width="88"
-                    Height="32"
-                    Margin="0,0,10,0"
-                    Visibility="Collapsed"
-                    Content="Retry"
-                    Style="{StaticResource DownloadPrimaryButton}"
-                    Click="Retry_Click" />
-            <Button x:Name="CancelButton"
-                    Width="88"
-                    Height="32"
-                    Content="Cancel"
-                    Style="{StaticResource DownloadSecondaryButton}"
-                    Click="Cancel_Click" />
-        </StackPanel>
-    </Grid>
+    <Border Grid.Row="2"
+            Padding="28,16"
+            Background="{StaticResource FooterBrush}"
+            BorderBrush="{StaticResource DividerBrush}"
+            BorderThickness="0,1,0,0">
+      <StackPanel HorizontalAlignment="Right"
+                  Orientation="Horizontal">
+        <Button x:Name="RetryButton"
+                Margin="0,0,10,0"
+                Visibility="Collapsed"
+                Content="Retry"
+                AutomationProperties.Name="Retry model download"
+                Style="{StaticResource DownloadPrimaryButton}"
+                Click="Retry_Click" />
+        <Button x:Name="CancelButton"
+                Content="Cancel"
+                AutomationProperties.Name="Cancel model download"
+                Style="{StaticResource DownloadSecondaryButton}"
+                Click="Cancel_Click" />
+      </StackPanel>
+    </Border>
+  </Grid>
 </Window>

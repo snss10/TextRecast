@@ -181,7 +181,7 @@ public sealed class LocalSlmTextFormatter : ITextFormatter
     private int GetOutputTokenBudget(FormatTextRequest request, string prompt)
     {
         var promptTokens = _weights!.Tokenize(prompt, true, true, Encoding.UTF8).Length;
-        var availableTokens = checked((int)_options.ContextSize) - promptTokens - ContextSafetyMarginTokens;
+        var availableTokens = checked((int)_options.Profile.ContextSize) - promptTokens - ContextSafetyMarginTokens;
         if (availableTokens < MinimumOutputTokens)
         {
             throw new TextFormattingException(
@@ -199,7 +199,7 @@ public sealed class LocalSlmTextFormatter : ITextFormatter
         var desiredTokens = Math.Clamp(
             (int)Math.Ceiling(expectedOutputWords * 1.9) + 48,
             MinimumOutputTokens,
-            _options.MaxOutputTokens);
+            _options.Profile.MaxOutputTokens);
         return Math.Min(desiredTokens, availableTokens);
     }
 
@@ -225,7 +225,7 @@ public sealed class LocalSlmTextFormatter : ITextFormatter
                 _options.ModelPath);
         }
 
-        if (new FileInfo(_options.ModelPath).Length != _options.ExpectedModelFileSize)
+        if (new FileInfo(_options.ModelPath).Length != _options.Profile.ExpectedFileSize)
         {
             throw new InvalidDataException("The local SLM model has an unexpected file size.");
         }
@@ -241,7 +241,7 @@ public sealed class LocalSlmTextFormatter : ITextFormatter
 
             var parameters = new ModelParams(_options.ModelPath)
             {
-                ContextSize = _options.ContextSize,
+                ContextSize = _options.Profile.ContextSize,
                 Threads = _options.ThreadCount,
                 GpuLayerCount = 0
             };
@@ -265,7 +265,7 @@ public sealed class LocalSlmTextFormatter : ITextFormatter
 
         var hash = await SHA256.HashDataAsync(stream, cancellationToken);
         var actual = Convert.ToHexStringLower(hash);
-        if (!actual.Equals(_options.ExpectedModelSha256, StringComparison.Ordinal))
+        if (!actual.Equals(_options.Profile.ExpectedSha256, StringComparison.Ordinal))
         {
             throw new InvalidDataException("The local SLM model failed its integrity check.");
         }
