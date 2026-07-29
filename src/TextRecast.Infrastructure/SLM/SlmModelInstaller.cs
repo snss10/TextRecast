@@ -8,23 +8,31 @@ namespace TextRecast.Infrastructure.SLM;
 public sealed class SlmModelInstaller
 {
     private static readonly TimeSpan ProgressReportInterval = TimeSpan.FromMilliseconds(125);
-    private static readonly HttpClient HttpClient = CreateHttpClient();
+    private readonly HttpClient _httpClient;
+    private readonly string _packagedModelDirectory;
     private readonly SlmModelProfile _profile;
+    private readonly string _userModelDirectory;
 
-    public SlmModelInstaller(SlmModelProfile profile)
+    public SlmModelInstaller(
+        SlmModelProfile profile,
+        HttpClient httpClient,
+        string packagedModelDirectory,
+        string userModelDirectory)
     {
-        _profile = profile;
+        ArgumentException.ThrowIfNullOrWhiteSpace(packagedModelDirectory);
+        ArgumentException.ThrowIfNullOrWhiteSpace(userModelDirectory);
+
+        _profile = profile ?? throw new ArgumentNullException(nameof(profile));
+        _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+        _packagedModelDirectory = packagedModelDirectory;
+        _userModelDirectory = userModelDirectory;
     }
 
     public string PackagedModelPath =>
-        Path.Combine(AppContext.BaseDirectory, "Models", _profile.FileName);
+        Path.Combine(_packagedModelDirectory, _profile.FileName);
 
     public string UserModelPath =>
-        Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "TextRecast",
-            "Models",
-            _profile.FileName);
+        Path.Combine(_userModelDirectory, _profile.FileName);
 
     public string? FindInstalledModel()
     {
@@ -50,7 +58,7 @@ public sealed class SlmModelInstaller
 
         try
         {
-            using var response = await HttpClient.GetAsync(
+            using var response = await _httpClient.GetAsync(
                 _profile.DownloadUri,
                 HttpCompletionOption.ResponseHeadersRead,
                 cancellationToken).ConfigureAwait(false);
@@ -168,15 +176,6 @@ public sealed class SlmModelInstaller
         }
     }
 
-    private static HttpClient CreateHttpClient()
-    {
-        var client = new HttpClient
-        {
-            Timeout = Timeout.InfiniteTimeSpan
-        };
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("TextRecast/1.0");
-        return client;
-    }
 }
 
 public enum SlmModelInstallationStage

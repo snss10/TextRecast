@@ -1,4 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
+using System.Net.Http;
 using System.Security.Principal;
 using System.Windows;
 using TextRecast.App.Presentation;
@@ -17,6 +19,7 @@ public partial class App : global::System.Windows.Application
 {
     private const string SingleInstanceNamePrefix = @"Local\TextRecast-";
     private LocalSlmTextFormatter? _formatter;
+    private HttpClient? _modelDownloadClient;
     private Mutex? _singleInstanceMutex;
     private bool _ownsSingleInstanceMutex;
 
@@ -32,7 +35,15 @@ public partial class App : global::System.Windows.Application
         }
 
         var modelProfile = SlmModelCatalog.Default;
-        var modelInstaller = new SlmModelInstaller(modelProfile);
+        _modelDownloadClient = CreateModelDownloadClient();
+        var modelInstaller = new SlmModelInstaller(
+            modelProfile,
+            _modelDownloadClient,
+            Path.Combine(AppContext.BaseDirectory, "Models"),
+            Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "TextRecast",
+                "Models"));
         var modelPath = modelInstaller.FindInstalledModel();
         if (modelPath is null)
         {
@@ -65,8 +76,19 @@ public partial class App : global::System.Windows.Application
     protected override void OnExit(ExitEventArgs e)
     {
         _formatter?.Dispose();
+        _modelDownloadClient?.Dispose();
         ReleaseSingleInstance();
         base.OnExit(e);
+    }
+
+    private static HttpClient CreateModelDownloadClient()
+    {
+        var client = new HttpClient
+        {
+            Timeout = Timeout.InfiniteTimeSpan
+        };
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("TextRecast/1.0");
+        return client;
     }
 
     private bool TryAcquireSingleInstance()

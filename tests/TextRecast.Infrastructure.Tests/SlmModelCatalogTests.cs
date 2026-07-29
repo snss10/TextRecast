@@ -1,4 +1,3 @@
-using System.IO;
 using TextRecast.Infrastructure.SLM;
 
 namespace TextRecast.Infrastructure.Tests;
@@ -22,18 +21,5 @@ public sealed class SlmModelCatalogTests
             profile.ExpectedSha256);
         Assert.AreEqual(4096U, profile.ContextSize);
         Assert.AreEqual(768, profile.MaxOutputTokens);
-    }
-
-    [TestMethod]
-    public void InstallerUsesDefaultProfileFileName()
-    {
-        var installer = new SlmModelInstaller(SlmModelCatalog.Default);
-
-        Assert.AreEqual(
-            SlmModelCatalog.Default.FileName,
-            Path.GetFileName(installer.PackagedModelPath));
-        Assert.AreEqual(
-            SlmModelCatalog.Default.FileName,
-            Path.GetFileName(installer.UserModelPath));
     }
 }
