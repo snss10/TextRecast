@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Net.Http;
 using System.Windows;
+using System.Windows.Automation;
 using TextRecast.Infrastructure.SLM;
 
 namespace TextRecast.App.Presentation;
@@ -53,10 +54,12 @@ public partial class ModelDownloadWindow : Window
         RetryButton.IsEnabled = false;
         RetryButton.Visibility = Visibility.Collapsed;
         CancelButton.Content = "Cancel";
-        DownloadProgressBar.IsIndeterminate = false;
+        CancelButton.IsEnabled = true;
+        AutomationProperties.SetName(CancelButton, "Cancel model download");
+        DownloadProgressBar.IsIndeterminate = true;
         DownloadProgressBar.Value = 0;
-        StatusTextBlock.Text = "Downloading local model...";
-        DetailsTextBlock.Text = "Keep TextRecast open while the model downloads.";
+        StatusTextBlock.Text = "Checking download status...";
+        DetailsTextBlock.Text = "Looking for an earlier download that can be resumed.";
 
         var progress = new Progress<SlmModelDownloadProgress>(UpdateProgress);
         try
@@ -71,7 +74,7 @@ public partial class ModelDownloadWindow : Window
         {
             if (!_isClosing)
             {
-                DialogResult = false;
+                ShowCancelled();
             }
         }
         catch (Exception ex) when (ex is HttpRequestException or IOException or UnauthorizedAccessException)
@@ -92,14 +95,14 @@ public partial class ModelDownloadWindow : Window
             _isDownloadInProgress = false;
             if (!_isClosing)
             {
-                RetryButton.IsEnabled = true;
+                RetryButton.IsEnabled = RetryButton.Visibility == Visibility.Visible;
             }
         }
     }
 
     private void UpdateProgress(SlmModelDownloadProgress progress)
     {
-        if (progress.Stage == SlmModelInstallationStage.Verifying)
+        if (progress.Stage is SlmModelInstallationStage.Verifying)
         {
             DownloadProgressBar.IsIndeterminate = false;
             DownloadProgressBar.Value = 100;
@@ -108,20 +111,51 @@ public partial class ModelDownloadWindow : Window
             return;
         }
 
+        if (progress.Stage is SlmModelInstallationStage.Installing)
+        {
+            DownloadProgressBar.IsIndeterminate = false;
+            DownloadProgressBar.Value = 100;
+            StatusTextBlock.Text = "Installing local model...";
+            DetailsTextBlock.Text = "Finishing setup. This should only take a moment.";
+            return;
+        }
+
         if (progress.Percentage is double percentage)
         {
             DownloadProgressBar.IsIndeterminate = false;
             DownloadProgressBar.Value = percentage;
-            StatusTextBlock.Text = $"Downloading local model... {percentage:F0}%";
+            var action = progress.IsResuming
+                ? "Resuming local model download"
+                : progress.BytesDownloaded == 0
+                    ? "Starting local model download"
+                    : "Downloading local model";
+            StatusTextBlock.Text = $"{action}... {percentage:F0}%";
         }
         else
         {
             DownloadProgressBar.IsIndeterminate = true;
+            StatusTextBlock.Text = progress.IsResuming
+                ? "Resuming local model download..."
+                : "Starting local model download...";
         }
 
-        DetailsTextBlock.Text = progress.TotalBytes is long total
-            ? $"{FormatBytes(progress.BytesDownloaded)} of {FormatBytes(total)}"
-            : $"{FormatBytes(progress.BytesDownloaded)} downloaded";
+        var details = new List<string>
+        {
+            progress.TotalBytes is long total
+                ? $"{FormatBytes(progress.BytesDownloaded)} of {FormatBytes(total)}"
+                : $"{FormatBytes(progress.BytesDownloaded)} downloaded"
+        };
+        if (progress.BytesPerSecond is double bytesPerSecond && bytesPerSecond > 0)
+        {
+            details.Add($"{FormatBytes(bytesPerSecond)}/s");
+        }
+
+        if (progress.EstimatedTimeRemaining is TimeSpan remaining && remaining > TimeSpan.Zero)
+        {
+            details.Add($"{FormatDuration(remaining)} remaining");
+        }
+
+        DetailsTextBlock.Text = string.Join("  •  ", details);
     }
 
     private void ShowError(string message)
@@ -132,6 +166,22 @@ public partial class ModelDownloadWindow : Window
         RetryButton.Visibility = Visibility.Visible;
         RetryButton.IsEnabled = true;
         CancelButton.Content = "Close";
+        CancelButton.IsEnabled = true;
+        AutomationProperties.SetName(CancelButton, "Close model setup");
+    }
+
+    private void ShowCancelled()
+    {
+        DownloadProgressBar.IsIndeterminate = false;
+        StatusTextBlock.Text = "Model download paused.";
+        DetailsTextBlock.Text = File.Exists(_installer.PartialModelPath)
+            ? "Your progress was saved. Select Retry when you are ready to resume."
+            : "No model data was lost. Select Retry when you are ready.";
+        RetryButton.Visibility = Visibility.Visible;
+        RetryButton.IsEnabled = true;
+        CancelButton.Content = "Close";
+        CancelButton.IsEnabled = true;
+        AutomationProperties.SetName(CancelButton, "Close model setup");
     }
 
     private async void Retry_Click(object sender, RoutedEventArgs e)
@@ -141,11 +191,16 @@ public partial class ModelDownloadWindow : Window
 
     private void Cancel_Click(object sender, RoutedEventArgs e)
     {
-        _downloadCancellation?.Cancel();
-        if (CancelButton.Content?.ToString() == "Close")
+        if (_isDownloadInProgress && _downloadCancellation is not null)
         {
-            DialogResult = false;
+            StatusTextBlock.Text = "Pausing model download...";
+            DetailsTextBlock.Text = "Keeping the downloaded data so setup can resume later.";
+            CancelButton.IsEnabled = false;
+            _downloadCancellation.Cancel();
+            return;
         }
+
+        DialogResult = false;
     }
 
     private void Window_Closing(object? sender, CancelEventArgs e)
@@ -157,9 +212,33 @@ public partial class ModelDownloadWindow : Window
         }
     }
 
-    private static string FormatBytes(long bytes)
+    private static string FormatBytes(double bytes)
     {
-        const double bytesPerMegabyte = 1024 * 1024;
-        return $"{bytes / bytesPerMegabyte:N1} MB";
+        const double bytesPerKilobyte = 1024;
+        const double bytesPerMegabyte = bytesPerKilobyte * 1024;
+        const double bytesPerGigabyte = bytesPerMegabyte * 1024;
+
+        return bytes switch
+        {
+            >= bytesPerGigabyte => $"{bytes / bytesPerGigabyte:N2} GB",
+            >= bytesPerMegabyte => $"{bytes / bytesPerMegabyte:N1} MB",
+            >= bytesPerKilobyte => $"{bytes / bytesPerKilobyte:N0} KB",
+            _ => $"{bytes:N0} B"
+        };
+    }
+
+    private static string FormatDuration(TimeSpan duration)
+    {
+        if (duration.TotalHours >= 1)
+        {
+            return $"{(int)duration.TotalHours}h {duration.Minutes}m";
+        }
+
+        if (duration.TotalMinutes >= 1)
+        {
+            return $"{(int)duration.TotalMinutes}m {duration.Seconds}s";
+        }
+
+        return $"{Math.Max((int)Math.Ceiling(duration.TotalSeconds), 1)}s";
     }
 }

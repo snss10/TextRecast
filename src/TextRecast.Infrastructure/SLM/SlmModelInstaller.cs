@@ -91,6 +91,7 @@ public sealed class SlmModelInstaller
 
         while (true)
         {
+            ReportDownloadStart(progress, partialState);
             EnsureSufficientDiskSpace(partialState?.Length ?? 0);
             using var request = CreateDownloadRequest(partialState);
             using var response = await _httpClient.SendAsync(
@@ -121,6 +122,7 @@ public sealed class SlmModelInstaller
                         response,
                         append: true,
                         partialState.Length,
+                        isResuming: true,
                         progress,
                         cancellationToken).ConfigureAwait(false);
                     return await VerifyAndInstallAsync(
@@ -137,6 +139,7 @@ public sealed class SlmModelInstaller
                         response,
                         append: false,
                         initialBytesDownloaded: 0,
+                        isResuming: false,
                         progress,
                         cancellationToken).ConfigureAwait(false);
                     return await VerifyAndInstallAsync(
@@ -160,6 +163,7 @@ public sealed class SlmModelInstaller
                 response,
                 append: false,
                 initialBytesDownloaded: 0,
+                isResuming: false,
                 progress,
                 cancellationToken).ConfigureAwait(false);
             return await VerifyAndInstallAsync(
@@ -189,6 +193,17 @@ public sealed class SlmModelInstaller
     private static TimeSpan GetRetryDelay(int retryCount)
     {
         return TimeSpan.FromMilliseconds(250 * (1 << retryCount));
+    }
+
+    private void ReportDownloadStart(
+        IProgress<SlmModelDownloadProgress>? progress,
+        PartialDownloadState? partialState)
+    {
+        var downloadedBytes = partialState?.Length ?? 0;
+        progress?.Report(new SlmModelDownloadProgress(
+            downloadedBytes,
+            _profile.ExpectedFileSize,
+            IsResuming: downloadedBytes > 0));
     }
 
     private HttpRequestMessage CreateDownloadRequest(PartialDownloadState? partialState)
@@ -356,6 +371,7 @@ public sealed class SlmModelInstaller
         HttpResponseMessage response,
         bool append,
         long initialBytesDownloaded,
+        bool isResuming,
         IProgress<SlmModelDownloadProgress>? progress,
         CancellationToken cancellationToken)
     {
@@ -372,6 +388,7 @@ public sealed class SlmModelInstaller
 
         var buffer = new byte[BufferSize];
         var progressTimer = Stopwatch.StartNew();
+        var transferTimer = Stopwatch.StartNew();
         var downloaded = initialBytesDownloaded;
         var lastReportedBytes = -1L;
         while (true)
@@ -393,7 +410,11 @@ public sealed class SlmModelInstaller
             {
                 progress.Report(new SlmModelDownloadProgress(
                     downloaded,
-                    _profile.ExpectedFileSize));
+                    _profile.ExpectedFileSize,
+                    IsResuming: isResuming,
+                    BytesPerSecond: CalculateTransferRate(
+                        downloaded - initialBytesDownloaded,
+                        transferTimer.Elapsed)));
                 lastReportedBytes = downloaded;
                 progressTimer.Restart();
             }
@@ -403,7 +424,11 @@ public sealed class SlmModelInstaller
         {
             progress.Report(new SlmModelDownloadProgress(
                 downloaded,
-                _profile.ExpectedFileSize));
+                _profile.ExpectedFileSize,
+                IsResuming: isResuming,
+                BytesPerSecond: CalculateTransferRate(
+                    downloaded - initialBytesDownloaded,
+                    transferTimer.Elapsed)));
         }
 
         await destination.FlushAsync(cancellationToken).ConfigureAwait(false);
@@ -424,6 +449,13 @@ public sealed class SlmModelInstaller
         }
     }
 
+    private static double? CalculateTransferRate(long transferredBytes, TimeSpan elapsed)
+    {
+        return transferredBytes > 0 && elapsed.TotalSeconds > 0
+            ? transferredBytes / elapsed.TotalSeconds
+            : null;
+    }
+
     private async Task<string> VerifyAndInstallAsync(
         IProgress<SlmModelDownloadProgress>? progress,
         CancellationToken cancellationToken)
@@ -442,6 +474,10 @@ public sealed class SlmModelInstaller
             throw;
         }
 
+        progress?.Report(new SlmModelDownloadProgress(
+            _profile.ExpectedFileSize,
+            _profile.ExpectedFileSize,
+            SlmModelInstallationStage.Installing));
         File.Move(PartialModelPath, UserModelPath, overwrite: true);
         TryDeleteFile(PartialMetadataPath);
         return UserModelPath;
@@ -529,15 +565,37 @@ public sealed class SlmModelInstaller
 public enum SlmModelInstallationStage
 {
     Downloading,
-    Verifying
+    Verifying,
+    Installing
 }
 
 public sealed record SlmModelDownloadProgress(
     long BytesDownloaded,
     long? TotalBytes,
-    SlmModelInstallationStage Stage = SlmModelInstallationStage.Downloading)
+    SlmModelInstallationStage Stage = SlmModelInstallationStage.Downloading,
+    bool IsResuming = false,
+    double? BytesPerSecond = null)
 {
     public double? Percentage => TotalBytes > 0
         ? Math.Clamp((double)BytesDownloaded / TotalBytes.Value * 100, 0, 100)
         : null;
+
+    public TimeSpan? EstimatedTimeRemaining
+    {
+        get
+        {
+            if (TotalBytes is not long totalBytes ||
+                BytesPerSecond is not double bytesPerSecond ||
+                bytesPerSecond <= 0)
+            {
+                return null;
+            }
+
+            var remainingBytes = Math.Max(totalBytes - BytesDownloaded, 0);
+            var remainingSeconds = remainingBytes / bytesPerSecond;
+            return remainingSeconds <= TimeSpan.MaxValue.TotalSeconds
+                ? TimeSpan.FromSeconds(remainingSeconds)
+                : TimeSpan.MaxValue;
+        }
+    }
 }

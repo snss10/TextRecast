@@ -94,10 +94,14 @@ public sealed class SlmModelInstallerTests
                 () => installer.DownloadAsync(null, CancellationToken.None));
             Assert.AreEqual(ResumeOffset, new FileInfo(installer.PartialModelPath).Length);
 
-            var installedPath = await installer.DownloadAsync(null, CancellationToken.None);
+            var progressReports = new List<SlmModelDownloadProgress>();
+            var installedPath = await installer.DownloadAsync(
+                new InlineProgress<SlmModelDownloadProgress>(progressReports.Add),
+                CancellationToken.None);
 
             CollectionAssert.AreEqual(modelBytes, await File.ReadAllBytesAsync(installedPath));
             AssertResumeRequest(handler.Requests[1]);
+            Assert.IsTrue(progressReports[0].IsResuming);
         }
         finally
         {
@@ -472,6 +476,54 @@ public sealed class SlmModelInstallerTests
         }
     }
 
+    [TestMethod]
+    public async Task DownloadAsyncReportsDownloadVerificationAndInstallationStages()
+    {
+        var modelBytes = CreateModelBytes();
+        var testRoot = CreateTestDirectory();
+        try
+        {
+            var handler = new RecordingHttpMessageHandler(
+                () => CreateFullResponse(modelBytes, Version1EntityTag));
+            using var client = new HttpClient(handler);
+            var installer = CreateInstaller(modelBytes, client, testRoot);
+            var progressReports = new List<SlmModelDownloadProgress>();
+
+            await installer.DownloadAsync(
+                new InlineProgress<SlmModelDownloadProgress>(progressReports.Add),
+                CancellationToken.None);
+
+            Assert.IsFalse(progressReports[0].IsResuming);
+            CollectionAssert.Contains(
+                progressReports.Select(report => report.Stage).ToList(),
+                SlmModelInstallationStage.Downloading);
+            CollectionAssert.Contains(
+                progressReports.Select(report => report.Stage).ToList(),
+                SlmModelInstallationStage.Verifying);
+            CollectionAssert.Contains(
+                progressReports.Select(report => report.Stage).ToList(),
+                SlmModelInstallationStage.Installing);
+        }
+        finally
+        {
+            Directory.Delete(testRoot, recursive: true);
+        }
+    }
+
+    [TestMethod]
+    public void DownloadProgressCalculatesPercentageAndEstimatedTime()
+    {
+        var progress = new SlmModelDownloadProgress(
+            BytesDownloaded: 500,
+            TotalBytes: 1000,
+            IsResuming: true,
+            BytesPerSecond: 100);
+
+        Assert.AreEqual(50, progress.Percentage);
+        Assert.AreEqual(TimeSpan.FromSeconds(5), progress.EstimatedTimeRemaining);
+        Assert.IsTrue(progress.IsResuming);
+    }
+
     private static byte[] CreateModelBytes()
     {
         return new byte[] { 10, 20, 30, 40, 50, 60, 70, 80 };
@@ -644,6 +696,14 @@ public sealed class SlmModelInstallerTests
         long? RangeStart,
         long? RangeEnd,
         string? IfRange);
+
+    private sealed class InlineProgress<T>(Action<T> report) : IProgress<T>
+    {
+        public void Report(T value)
+        {
+            report(value);
+        }
+    }
 
     private sealed class InterruptingReadStream(
         byte[] modelBytes,
