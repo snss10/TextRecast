@@ -4,7 +4,6 @@ using System.Text;
 using LLama;
 using LLama.Common;
 using LLama.Native;
-using LLama.Sampling;
 using TextRecast.Core.Abstractions;
 using TextRecast.Core.Formatting;
 
@@ -17,7 +16,7 @@ public sealed class LocalSlmTextFormatter : ITextFormatter
     private const int MaxChunkCharacters = 450;
     private const int MinimumOutputTokens = 64;
     private readonly SlmModelOptions _options;
-    private readonly ISlmPromptBuilder _promptBuilder;
+    private readonly ISlmModelAdapter _adapter;
     private readonly SemaphoreSlim _inferenceGate = new(1, 1);
     private readonly CancellationTokenSource _shutdownCancellation = new();
     private LLamaWeights? _weights;
@@ -25,14 +24,14 @@ public sealed class LocalSlmTextFormatter : ITextFormatter
     private int _disposeState;
 
     public LocalSlmTextFormatter(SlmModelOptions options)
-        : this(options, new ChatMlPromptBuilder())
+        : this(options, SlmModelAdapterRegistry.Default.Resolve(options.Profile))
     {
     }
 
-    public LocalSlmTextFormatter(SlmModelOptions options, ISlmPromptBuilder promptBuilder)
+    internal LocalSlmTextFormatter(SlmModelOptions options, ISlmModelAdapter adapter)
     {
         _options = options;
-        _promptBuilder = promptBuilder;
+        _adapter = adapter;
     }
 
     public async Task<string> FormatAsync(FormatTextRequest request, CancellationToken cancellationToken)
@@ -125,7 +124,7 @@ public sealed class LocalSlmTextFormatter : ITextFormatter
         FormatTextRequest request,
         CancellationToken cancellationToken)
     {
-        var prompt = _promptBuilder.Build(request);
+        var prompt = _adapter.BuildPrompt(request);
         return await Task.Run(
             () => InferAsync(request, prompt, cancellationToken),
             cancellationToken);
@@ -162,8 +161,8 @@ public sealed class LocalSlmTextFormatter : ITextFormatter
         var inferenceParams = new InferenceParams
         {
             MaxTokens = GetOutputTokenBudget(request, prompt),
-            AntiPrompts = ["<|im_end|>", "<|im_start|>"],
-            SamplingPipeline = new GreedySamplingPipeline()
+            AntiPrompts = [.. _adapter.StopSequences],
+            SamplingPipeline = _adapter.CreateSamplingPipeline()
         };
 
         var output = new StringBuilder();
@@ -175,7 +174,7 @@ public sealed class LocalSlmTextFormatter : ITextFormatter
             output.Append(token);
         }
 
-        return RemoveProtocolMarkers(output.ToString());
+        return _adapter.CleanOutput(output.ToString());
     }
 
     private int GetOutputTokenBudget(FormatTextRequest request, string prompt)
@@ -188,14 +187,7 @@ public sealed class LocalSlmTextFormatter : ITextFormatter
                 "This selection exceeds the local model's context capacity. Try a smaller section.");
         }
 
-        var inputWords = ChatMlPromptBuilder.CountWords(request.Text);
-        var expectedOutputWords = request.Operation switch
-        {
-            FormatOperation.Shorten => ChatMlPromptBuilder.GetShorterWordTarget(inputWords),
-            FormatOperation.Lengthen => ChatMlPromptBuilder.GetLongerWordTarget(inputWords),
-            FormatOperation.Summarize => ChatMlPromptBuilder.GetSummaryWordTarget(inputWords),
-            _ => inputWords
-        };
+        var expectedOutputWords = _adapter.GetExpectedOutputWordCount(request);
         var desiredTokens = Math.Clamp(
             (int)Math.Ceiling(expectedOutputWords * 1.9) + 48,
             MinimumOutputTokens,
@@ -271,11 +263,4 @@ public sealed class LocalSlmTextFormatter : ITextFormatter
         }
     }
 
-    private static string RemoveProtocolMarkers(string output)
-    {
-        return output
-            .Replace("<|im_end|>", string.Empty, StringComparison.Ordinal)
-            .Replace("<|im_start|>", string.Empty, StringComparison.Ordinal)
-            .Trim();
-    }
 }

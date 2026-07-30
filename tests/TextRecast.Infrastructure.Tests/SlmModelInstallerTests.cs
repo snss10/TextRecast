@@ -560,6 +560,7 @@ public sealed class SlmModelInstallerTests
         return new SlmModelProfile
         {
             Id = "test-model",
+            AdapterId = Qwen25ModelAdapter.AdapterId,
             FileName = "test-model.gguf",
             DownloadUri = new Uri("https://models.example.test/test-model.gguf"),
             ExpectedSha256 = Convert.ToHexStringLower(SHA256.HashData(modelBytes)),
