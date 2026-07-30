@@ -1,12 +1,46 @@
+using LLama.Sampling;
 using TextRecast.Core.Formatting;
 
 namespace TextRecast.Infrastructure.SLM;
 
-public sealed class ChatMlPromptBuilder : ISlmPromptBuilder
+public sealed class Qwen25ModelAdapter : ISlmModelAdapter
 {
-    public string Build(FormatTextRequest request)
+    public const string AdapterId = "qwen2.5-chatml";
+    private static readonly IReadOnlyList<string> ChatMlStopSequences =
+        Array.AsReadOnly(["<|im_end|>", "<|im_start|>"]);
+
+    public string Id => AdapterId;
+
+    public IReadOnlyList<string> StopSequences => ChatMlStopSequences;
+
+    public string BuildPrompt(FormatTextRequest request)
     {
         return BuildPrompt(BuildTask(request), request.Text);
+    }
+
+    public ISamplingPipeline CreateSamplingPipeline()
+    {
+        return new GreedySamplingPipeline();
+    }
+
+    public int GetExpectedOutputWordCount(FormatTextRequest request)
+    {
+        var inputWords = CountWords(request.Text);
+        return request.Operation switch
+        {
+            FormatOperation.Shorten => GetShorterWordTarget(inputWords),
+            FormatOperation.Lengthen => GetLongerWordTarget(inputWords),
+            FormatOperation.Summarize => GetSummaryWordTarget(inputWords),
+            _ => inputWords
+        };
+    }
+
+    public string CleanOutput(string output)
+    {
+        return output
+            .Replace("<|im_end|>", string.Empty, StringComparison.Ordinal)
+            .Replace("<|im_start|>", string.Empty, StringComparison.Ordinal)
+            .Trim();
     }
 
     private static string BuildPrompt(string task, string text)
@@ -76,5 +110,4 @@ public sealed class ChatMlPromptBuilder : ISlmPromptBuilder
 
     internal static int GetSummaryWordTarget(int wordCount) =>
         Math.Max(8, (int)Math.Ceiling(wordCount * 0.4));
-
 }

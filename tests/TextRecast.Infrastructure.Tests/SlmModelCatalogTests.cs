@@ -11,6 +11,7 @@ public sealed class SlmModelCatalogTests
         var profile = SlmModelCatalog.Default;
 
         Assert.AreEqual("Qwen2.5-1.5B-Instruct-Q4_K_M", profile.Id);
+        Assert.AreEqual(Qwen25ModelAdapter.AdapterId, profile.AdapterId);
         Assert.AreEqual("qwen2.5-1.5b-instruct-q4_k_m.gguf", profile.FileName);
         Assert.AreEqual(
             "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf?download=true",

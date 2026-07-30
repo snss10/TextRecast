@@ -7,6 +7,7 @@ public static class SlmModelCatalog
     public static SlmModelProfile Default { get; } = new()
     {
         Id = "Qwen2.5-1.5B-Instruct-Q4_K_M",
+        AdapterId = Qwen25ModelAdapter.AdapterId,
         FileName = DefaultFileName,
         DownloadUri = new Uri(
             "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf?download=true"),
