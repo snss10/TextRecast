@@ -270,9 +270,13 @@ public sealed record BenchmarkSummary(
             caseSummaries.All(summary => summary.AverageQualityScore >= 8) &&
             results.All(result =>
                 result.Error is null &&
+                result.OutputPresent &&
                 result.ProtocolSafe &&
                 result.RepetitionSafe &&
-                result.LanguagePreserved);
+                result.LanguagePreserved &&
+                result.RequiredTermsMatched == result.RequiredTermsTotal &&
+                result.ForbiddenTermsAbsent &&
+                result.LengthWithinBounds);
 
         return new BenchmarkSummary(
             Round(results.Count == 0 ? 0 : results.Average(result => result.QualityScore)),

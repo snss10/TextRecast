@@ -111,4 +111,47 @@ public sealed class ModelQualificationCorpusTests
         Assert.AreEqual(10D, result.GenerationTokensPerSecond);
         Assert.AreEqual(8.4D, result.EndToEndTokensPerSecond);
     }
+
+    [TestMethod]
+    public void AutomatedGateRejectsHighScoreThatMissesARequiredConstraint()
+    {
+        var testCase = new ModelQualificationCase(
+            "test",
+            "operation",
+            "en",
+            new FormatTextRequest("Send revised quote by noon.", FormatOperation.Lengthen),
+            new ModelQualificationExpectation(
+                ["quote", "noon"],
+                [],
+                [],
+                5,
+                20));
+        var result = ModelQualificationEvaluator.Evaluate(
+            testCase,
+            "Please send the revised quote by the end of the working day.",
+            TimeSpan.FromSeconds(1),
+            TimeSpan.FromMilliseconds(250),
+            outputTokens: 12);
+
+        Assert.AreEqual(9D, result.QualityScore);
+        Assert.IsFalse(BenchmarkSummary.Create([result]).AutomatedGatePassed);
+    }
+
+    [TestMethod]
+    public void EvaluatorRejectsCommonResponseLabelsAsProtocolLeakage()
+    {
+        var testCase = new ModelQualificationCase(
+            "test",
+            "tone",
+            "en",
+            new FormatTextRequest("source", FormatOperation.ChangeTone, ToneStyle.Friendly),
+            new ModelQualificationExpectation([], [], [], null, null));
+
+        var result = ModelQualificationEvaluator.Evaluate(
+            testCase,
+            "Here’s your revised version: Friendly text.",
+            TimeSpan.FromSeconds(1));
+
+        Assert.IsFalse(result.ProtocolSafe);
+    }
 }

@@ -42,6 +42,9 @@ public static partial class ModelQualificationEvaluator
         "[INST]",
         "<think>",
         "</think>",
+        "Here's your revised version:",
+        "Here’s your revised version:",
+        "(Note:",
         "Source text:",
         "Task:"
     ];
