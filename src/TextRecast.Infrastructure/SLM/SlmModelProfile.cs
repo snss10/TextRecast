@@ -8,6 +8,7 @@ public sealed record SlmModelProfile
     public required Uri DownloadUri { get; init; }
     public required string ExpectedSha256 { get; init; }
     public required long ExpectedFileSize { get; init; }
+    public SlmModelRequirements? Requirements { get; init; }
     public uint ContextSize { get; init; } = 4096;
     public int MaxOutputTokens { get; init; } = 768;
 }
