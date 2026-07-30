@@ -32,6 +32,10 @@ public sealed class ModelQualificationCorpusTests
             cases.Select(testCase => testCase.Language).Distinct().ToArray());
         Assert.AreEqual(cases.Count, cases.Select(testCase => testCase.Id).Distinct().Count());
         Assert.IsTrue(cases.All(testCase => !string.IsNullOrWhiteSpace(testCase.Request.Text)));
+        Assert.IsTrue(cases.Single(testCase => testCase.Language == "hi").Request.Text.Contains('क'));
+        Assert.IsTrue(cases.Single(testCase => testCase.Language == "es").Request.Text.Contains('í'));
+        Assert.IsTrue(cases.Single(testCase => testCase.Language == "fr").Request.Text.Contains('é'));
+        Assert.IsTrue(cases.Single(testCase => testCase.Language == "ja").Request.Text.Contains('ル'));
     }
 
     [TestMethod]
@@ -81,5 +85,30 @@ public sealed class ModelQualificationCorpusTests
         Assert.IsFalse(result.LanguagePreserved);
         Assert.AreEqual(0, result.RequiredTermsMatched);
         Assert.IsLessThan(8D, result.QualityScore);
+    }
+
+    [TestMethod]
+    public void EvaluatorCalculatesFirstTokenAndTokenizerThroughputMetrics()
+    {
+        var testCase = new ModelQualificationCase(
+            "test",
+            "short",
+            "en",
+            new FormatTextRequest("source", FormatOperation.Improve),
+            new ModelQualificationExpectation([], [], [], null, null));
+
+        var result = ModelQualificationEvaluator.Evaluate(
+            testCase,
+            "Clear output.",
+            TimeSpan.FromSeconds(2.5),
+            TimeSpan.FromSeconds(0.5),
+            outputTokens: 21,
+            iteration: 2);
+
+        Assert.AreEqual(2, result.Iteration);
+        Assert.AreEqual(500D, result.FirstTokenMilliseconds);
+        Assert.AreEqual(21, result.OutputTokens);
+        Assert.AreEqual(10D, result.GenerationTokensPerSecond);
+        Assert.AreEqual(8.4D, result.EndToEndTokensPerSecond);
     }
 }

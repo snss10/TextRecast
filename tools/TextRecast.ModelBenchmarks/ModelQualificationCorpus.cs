@@ -117,7 +117,7 @@ public static class ModelQualificationCorpus
             "improve-hi",
             "multilingual",
             "hi",
-            "कृपया रिपोर्ट शुक्रवार से पहले भेज दे क्योंकि समीक्षा सोमवार को शुरू होगी",
+            "कृपया रिपोर्ट शुक्रवार से पहले भेज दें क्योंकि समीक्षा सोमवार को शुरू होगी",
             FormatOperation.Improve,
             required: ["रिपोर्ट", "शुक्रवार", "सोमवार"],
             languageMarkers: ["रिपोर्ट", "शुक्रवार", "सोमवार"]),

@@ -3,11 +3,18 @@ using System.Text.RegularExpressions;
 namespace TextRecast.ModelBenchmarks;
 
 public sealed record ModelQualificationResult(
+    int Iteration,
     string CaseId,
     string Category,
     string Language,
+    string Operation,
+    string? Tone,
     string Output,
     double DurationMilliseconds,
+    double FirstTokenMilliseconds,
+    int OutputTokens,
+    double GenerationTokensPerSecond,
+    double EndToEndTokensPerSecond,
     int OutputWords,
     bool OutputPresent,
     bool ProtocolSafe,
@@ -27,6 +34,12 @@ public static partial class ModelQualificationEvaluator
         "<|im_start|>",
         "<|im_end|>",
         "<|assistant|>",
+        "<|system|>",
+        "<|user|>",
+        "<|start_of_role|>",
+        "<|end_of_role|>",
+        "[SYSTEM_PROMPT]",
+        "[INST]",
         "<think>",
         "</think>",
         "Source text:",
@@ -36,7 +49,10 @@ public static partial class ModelQualificationEvaluator
     public static ModelQualificationResult Evaluate(
         ModelQualificationCase testCase,
         string output,
-        TimeSpan duration)
+        TimeSpan duration,
+        TimeSpan? firstTokenLatency = null,
+        int outputTokens = 0,
+        int iteration = 1)
     {
         var normalizedOutput = output.Trim();
         var outputPresent = normalizedOutput.Length > 0;
@@ -68,13 +84,31 @@ public static partial class ModelQualificationEvaluator
             (requiredRatio * 2D) +
             (forbiddenTermsAbsent ? 1D : 0D) +
             (lengthWithinBounds ? 1D : 0D);
+        var firstToken = firstTokenLatency ?? TimeSpan.Zero;
+        var generationSeconds = Math.Max(
+            0,
+            (duration - firstToken).TotalSeconds);
+        var generatedAfterFirstToken = Math.Max(0, outputTokens - 1);
+        var generationTokensPerSecond = generationSeconds > 0
+            ? generatedAfterFirstToken / generationSeconds
+            : 0;
+        var endToEndTokensPerSecond = duration.TotalSeconds > 0
+            ? outputTokens / duration.TotalSeconds
+            : 0;
 
         return new ModelQualificationResult(
+            iteration,
             testCase.Id,
             testCase.Category,
             testCase.Language,
+            testCase.Request.Operation.ToString(),
+            testCase.Request.Tone?.ToString(),
             normalizedOutput,
-            duration.TotalMilliseconds,
+            Math.Round(duration.TotalMilliseconds, 2),
+            Math.Round(firstToken.TotalMilliseconds, 2),
+            outputTokens,
+            Math.Round(generationTokensPerSecond, 2),
+            Math.Round(endToEndTokensPerSecond, 2),
             outputWords,
             outputPresent,
             protocolSafe,
@@ -91,14 +125,22 @@ public static partial class ModelQualificationEvaluator
     public static ModelQualificationResult Failure(
         ModelQualificationCase testCase,
         Exception exception,
-        TimeSpan duration)
+        TimeSpan duration,
+        int iteration = 1)
     {
         return new ModelQualificationResult(
+            iteration,
             testCase.Id,
             testCase.Category,
             testCase.Language,
+            testCase.Request.Operation.ToString(),
+            testCase.Request.Tone?.ToString(),
             string.Empty,
-            duration.TotalMilliseconds,
+            Math.Round(duration.TotalMilliseconds, 2),
+            0,
+            0,
+            0,
+            0,
             0,
             false,
             true,
