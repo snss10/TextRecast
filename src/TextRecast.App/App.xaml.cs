@@ -50,18 +50,12 @@ public partial class App : global::System.Windows.Application
                 "Models");
 
             _modelDownloadClient = CreateModelDownloadClient();
-            var installers = profiles.ToDictionary(
-                profile => profile.Id,
-                profile => new SlmModelInstaller(
-                    profile,
-                    _modelDownloadClient,
-                    packagedModelDirectory,
-                    userModelDirectory),
-                StringComparer.Ordinal);
-            var installedPaths = installers
-                .Select(pair => (pair.Key, Path: pair.Value.FindInstalledModel()))
-                .Where(item => item.Path is not null)
-                .ToDictionary(item => item.Key, item => item.Path!, StringComparer.Ordinal);
+            var installations = new SlmModelInstallationSet(
+                profiles,
+                _modelDownloadClient,
+                packagedModelDirectory,
+                userModelDirectory);
+            var installedPaths = installations.FindInstalledModels();
 
             var settingsStore = new ModelSelectionSettingsStore(profiles.Select(profile => profile.Id));
             var settings = await settingsStore.LoadAsync();
@@ -95,7 +89,7 @@ public partial class App : global::System.Windows.Application
                 }
 
                 modelProfile = selectionWindow.SelectedProfile;
-                var modelInstaller = installers[modelProfile.Id];
+                var modelInstaller = installations.GetInstaller(modelProfile.Id);
                 modelPath = modelInstaller.FindInstalledModel() ?? string.Empty;
                 if (string.IsNullOrWhiteSpace(modelPath))
                 {
@@ -167,48 +161,18 @@ public partial class App : global::System.Windows.Application
         {
         }
 
-        var recommendedId = hardware is null
-            ? SlmModelCatalog.Default.Id
-            : SlmModelRecommender.Recommend(hardware, profiles, installedIds)
-                .RecommendedProfile?.Id ?? SlmModelCatalog.Default.Id;
-
-        return profiles.Select(profile =>
-        {
-            var isInstalled = installedIds.Contains(profile.Id);
-            if (profile.Requirements is null)
-            {
-                var compatibility = hardware is null
-                    ? "Hardware details are unavailable; the established default remains selectable."
-                    : "Established default. Review every generated result before replacement.";
-                return new ModelSelectionChoice(
-                    profile,
-                    IsCompatible: true,
-                    isInstalled,
-                    profile.Id.Equals(recommendedId, StringComparison.Ordinal),
-                    compatibility);
-            }
-
-            if (hardware is null)
-            {
-                return new ModelSelectionChoice(
-                    profile,
-                    IsCompatible: false,
-                    isInstalled,
-                    IsRecommended: false,
-                    "Unavailable because TextRecast could not inspect memory, CPU, and storage requirements.");
-            }
-
-            var assessment = SlmModelRecommender.Assess(hardware, profile, isInstalled);
-            var compatibilityText = assessment.IsEligible
-                ? "Compatible with the currently available memory, CPU, and model storage."
-                : "Currently unavailable: " + string.Join(" ", assessment.RejectionReasons);
-            return new ModelSelectionChoice(
-                profile,
-                assessment.IsEligible,
-                isInstalled,
-                profile.Id.Equals(recommendedId, StringComparison.Ordinal),
-                compatibilityText);
-        }).ToArray();
+        return SlmModelSetupPlanner.CreateChoices(
+                profiles,
+                hardware,
+                installedIds,
+                SlmModelCatalog.Default.Id)
+            .Select(choice => new ModelSelectionChoice(
+                choice.Profile,
+                choice.IsCompatible,
+                choice.IsInstalled,
+                choice.IsRecommended,
+                choice.CompatibilityText))
+            .ToArray();
     }
 
     protected override void OnExit(ExitEventArgs e)
