@@ -16,7 +16,7 @@ public static class SlmModelCatalog
         Description = "Smallest download and fastest established TextRecast option.",
         LanguageSupport = "English",
         LimitationNotice =
-            "Fast local model. It can miss context or change details, so review every result before replacing text.",
+            "Fast local model. It can miss context or change details, so review every replacement in the source application.",
         IsExperimental = false,
         AdapterId = Qwen25ModelAdapter.AdapterId,
         PromptProfileId = "qwen2.5-production-v1",
@@ -41,7 +41,7 @@ public static class SlmModelCatalog
         Description = "Faster experimental option with stronger general rewriting than the smallest model.",
         LanguageSupport = "English",
         LimitationNotice =
-            "Experimental. Summaries may add structure or unsupported actions; review names, facts, and deadlines before replacement.",
+            "Experimental. Summaries may add structure or unsupported actions; review names, facts, and deadlines after every replacement.",
         IsExperimental = true,
         AdapterId = Qwen35ModelAdapter.AdapterId,
         PromptProfileId = Qwen35ModelAdapter.BalancedPromptProfileId,

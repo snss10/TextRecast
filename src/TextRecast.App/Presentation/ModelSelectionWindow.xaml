@@ -176,7 +176,7 @@
                  FontSize="11"
                  LineHeight="17"
                  TextWrapping="Wrap"
-                 Text="English-only preview. Local models can make mistakes. TextRecast will continue showing generated text for review before replacement." />
+                 Text="English-only preview. Local models can make mistakes. Review the replaced text in the source application after every operation." />
     </Grid>
 
     <Border Grid.Row="2"

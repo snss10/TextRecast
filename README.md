@@ -43,7 +43,7 @@ Inference runs locally through LLamaSharp's CPU backend. On first setup, TextRec
 
 ### Requirements
 
-- Windows 10 or Windows 11 on x64 hardware
+- Windows 11 on x64 hardware, or a [Windows 10 edition still supported by .NET 10](https://github.com/dotnet/core/blob/main/release-notes/10.0/supported-os.md)
 - The current [Microsoft Visual C++ v14 Redistributable](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170) for x64
 - Approximately 2-4 GB of available disk space, depending on the selected model
 - An internet connection when no valid packaged or previously installed model is available
@@ -70,7 +70,7 @@ TextRecast shows the available models before making a network request. Each choi
 | Best quality | Qwen 3.5 4B Q5_K_M | 2.93 GiB | Experimental; verify roles, titles, and deadlines |
 | Alternative | Granite 4.1 3B Q5_K_M | 2.27 GiB | Experimental; higher semantic-drift risk |
 
-These profiles are currently supported for English rewriting only. None is perfect, so generated text always remains available for review before replacement. Hardware recommendations are guidance; Qwen 2.5 remains selectable when hardware inspection is unavailable.
+These profiles are currently supported for English rewriting only. None is perfect, so review the replaced text in the source application after every operation. Hardware recommendations are guidance; Qwen 2.5 remains selectable when hardware inspection is unavailable.
 
 Cancelling or losing the connection keeps a validated partial download. Select **Retry** on the same computer to continue from the saved point. TextRecast restarts safely if the server no longer accepts the saved range or the remote file has changed. A model becomes active only after its exact size and SHA-256 checksum pass verification. A valid installed selection is reused on later launches.
 
@@ -204,7 +204,7 @@ dotnet publish src/TextRecast.App/TextRecast.App.csproj -c Release -r win-x64 --
 
 Distribute the complete output folder, not only the executable. Any cataloged GGUF files documented in [Models/README.md](Models/README.md) are packaged when placed in the repository's `Models` directory before publishing. Normal release packages intentionally contain no model; the user chooses and confirms one during setup.
 
-For tagged releases, GitHub Actions creates a model-free `TextRecast-vX.Y.Z-win-x64.zip` containing the complete runtime and legal notices, plus a matching SHA-256 file. A release tag must use `vMAJOR.MINOR.PATCH` and match the version in `Directory.Build.props`.
+For tagged releases, GitHub Actions creates a model-free `TextRecast-vX.Y.Z-win-x64.zip` containing the complete runtime, TextRecast legal files, and the legal files supplied with the bundled .NET runtime packs, plus a matching SHA-256 file. A release tag must use `vMAJOR.MINOR.PATCH` and match the version in `Directory.Build.props`.
 
 ## Project layout
 

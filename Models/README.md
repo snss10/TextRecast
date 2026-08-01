@@ -2,7 +2,7 @@
 
 TextRecast runs one cataloged GGUF model at a time. During setup, the user reviews the available choices and confirms the exact model before any download starts. Release archives do not contain model binaries.
 
-All current profiles are for English rewriting. The three newer choices are experimental, and every generated result should be reviewed before replacement.
+All current profiles are for English rewriting. The three newer choices are experimental, and every replacement should be reviewed in the source application.
 
 | Role | Model file | Size | SHA-256 |
 | --- | --- | ---: | --- |

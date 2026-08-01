@@ -39,6 +39,14 @@ The above copyright notice and this permission notice shall be included in all c
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+## Bundled .NET runtime packs
+
+The self-contained Windows release includes Microsoft .NET runtime and Windows Desktop/WPF binaries. Their accompanying legal files are copied verbatim from the exact runtime packs selected during restore and are distributed beside the application as:
+
+- `DOTNET-LICENSE.txt`
+- `DOTNET-THIRD-PARTY-NOTICES.txt`
+- `WPF-LICENSE.txt`
+
 ## Lucide icon artwork
 
 `MahApps.Metro.IconPacks.Lucide` incorporates icon data from the [Lucide project](https://github.com/lucide-icons/lucide). Lucide is licensed under the ISC License, and the Lucide icons derived from Feather retain the Feather MIT notice below.

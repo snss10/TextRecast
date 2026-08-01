@@ -195,7 +195,7 @@ public partial class MainWindow : Window
             $"License: {_activeModelProfile.LicenseExpression}\n" +
             $"Source: {_activeModelProfile.SourceRepository}\n\n" +
             $"{_activeModelProfile.LimitationNotice}\n\n" +
-            "Always review generated text before selecting Replace.",
+            "Always review the replaced text in the source application.",
             "Current TextRecast model",
             MessageBoxButton.OK,
             _activeModelProfile.IsExperimental

@@ -46,7 +46,7 @@ public static class SlmModelSetupPlanner
         {
             var compatibility = hardware is null
                 ? "Hardware details are unavailable; the established default remains selectable."
-                : "Established default. Review every generated result before replacement.";
+                : "Established default. Review every replacement in the source application.";
             return new SlmModelSetupChoice(
                 profile,
                 IsCompatible: true,
