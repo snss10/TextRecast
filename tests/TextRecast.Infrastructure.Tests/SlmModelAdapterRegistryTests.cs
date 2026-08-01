@@ -25,4 +25,31 @@ public sealed class SlmModelAdapterRegistryTests
         StringAssert.Contains(exception.Message, profile.Id);
         StringAssert.Contains(exception.Message, profile.AdapterId);
     }
+
+    [TestMethod]
+    public void DefaultResolvesQwen35AdapterFromBalancedProfile()
+    {
+        var adapter = SlmModelAdapterRegistry.Default.Resolve(SlmModelCatalog.Qwen35Balanced);
+
+        Assert.IsInstanceOfType<Qwen35ModelAdapter>(adapter);
+        Assert.AreEqual(Qwen35ModelAdapter.AdapterId, adapter.Id);
+    }
+
+    [TestMethod]
+    public void DefaultResolvesQwen35AdapterFromQualityProfile()
+    {
+        var adapter = SlmModelAdapterRegistry.Default.Resolve(SlmModelCatalog.Qwen35Quality);
+
+        Assert.IsInstanceOfType<Qwen35ModelAdapter>(adapter);
+        Assert.AreEqual(Qwen35ModelAdapter.AdapterId, adapter.Id);
+    }
+
+    [TestMethod]
+    public void DefaultResolvesGraniteAdapterFromAlternativeProfile()
+    {
+        var adapter = SlmModelAdapterRegistry.Default.Resolve(SlmModelCatalog.Granite41Alternative);
+
+        Assert.IsInstanceOfType<Granite41ModelAdapter>(adapter);
+        Assert.AreEqual(Granite41ModelAdapter.AdapterId, adapter.Id);
+    }
 }
