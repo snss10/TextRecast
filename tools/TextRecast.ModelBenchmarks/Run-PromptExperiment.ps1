@@ -16,6 +16,9 @@ param(
     [Parameter(Mandatory)]
     [string] $OutputPath,
 
+    [ValidateSet('qwen3.5-default-v1', 'greedy-v1')]
+    [string] $SamplingProfile,
+
     [ValidateRange(1, 10)]
     [int] $Iterations = 1
 )
@@ -56,6 +59,10 @@ $benchmarkArguments = @(
     '--iterations', $Iterations,
     '--corpus-scope', $Scope
 )
+
+if (-not [string]::IsNullOrWhiteSpace($SamplingProfile)) {
+    $benchmarkArguments += @('--sampling-profile', $SamplingProfile)
+}
 
 Push-Location $repositoryRoot
 try {

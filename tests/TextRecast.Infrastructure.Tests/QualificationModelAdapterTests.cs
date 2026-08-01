@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using LLama.Sampling;
 using TextRecast.Core.Formatting;
 using TextRecast.Infrastructure.SLM;
 using TextRecast.ModelBenchmarks;
@@ -346,6 +347,47 @@ public sealed class QualificationModelAdapterTests
             .All(adapter => adapter.SamplingPipelineId == "GreedySamplingPipeline"));
         Assert.IsTrue(new[] { qwen25, phi, ministral, granite }
             .All(adapter => adapter.SamplingSeed is null));
+    }
+
+    [TestMethod]
+    public void Qwen35SupportsExplicitGreedyQualificationProfile()
+    {
+        var model = QualificationPromptCatalog.ResolveModel(
+            RuntimeModels[1].RuntimeModelId,
+            RuntimeModels[1].AdapterId);
+        var profile = model.PromptProfiles.Single(candidate => candidate.Id == "qwen35-2b-balanced-v3");
+        var adapter = QualificationModelAdapters.Resolve(
+            RuntimeModels[1].AdapterId,
+            profile,
+            Qwen35QualificationAdapter.GreedySamplingProfileId);
+
+        Assert.AreEqual("greedy-v1", adapter.SamplingProfileId);
+        Assert.AreEqual("GreedySamplingPipeline", adapter.SamplingPipelineId);
+        Assert.IsNull(adapter.SamplingSeed);
+        Assert.IsNull(adapter.SamplingTemperature);
+        Assert.IsInstanceOfType<GreedySamplingPipeline>(adapter.CreateSamplingPipeline());
+    }
+
+    [TestMethod]
+    public void QualificationAdaptersRejectUnsupportedSamplingProfile()
+    {
+        var qwenModel = QualificationPromptCatalog.ResolveModel(
+            RuntimeModels[1].RuntimeModelId,
+            RuntimeModels[1].AdapterId);
+        var qwenProfile = qwenModel.PromptProfiles.Single(candidate => candidate.IsBaseline);
+        var graniteModel = QualificationPromptCatalog.ResolveModel(
+            RuntimeModels[5].RuntimeModelId,
+            RuntimeModels[5].AdapterId);
+        var graniteProfile = graniteModel.PromptProfiles.Single(candidate => candidate.IsBaseline);
+
+        Assert.ThrowsExactly<ArgumentException>(() => QualificationModelAdapters.Resolve(
+            RuntimeModels[1].AdapterId,
+            qwenProfile,
+            "unknown"));
+        Assert.ThrowsExactly<ArgumentException>(() => QualificationModelAdapters.Resolve(
+            RuntimeModels[5].AdapterId,
+            graniteProfile,
+            Qwen35QualificationAdapter.DefaultSamplingProfileId));
     }
 
     [TestMethod]

@@ -179,6 +179,19 @@ public sealed class ModelQualificationCorpusTests
     }
 
     [TestMethod]
+    public void BenchmarkCommandAcceptsOptionalSamplingProfile()
+    {
+        var defaultOptions = BenchmarkOptions.Parse(CreateBenchmarkArguments());
+        var greedyOptions = BenchmarkOptions.Parse(
+            CreateBenchmarkArguments()
+                .Concat(["--sampling-profile", "greedy-v1"])
+                .ToArray());
+
+        Assert.IsNull(defaultOptions.SamplingProfileId);
+        Assert.AreEqual("greedy-v1", greedyOptions.SamplingProfileId);
+    }
+
+    [TestMethod]
     public void BenchmarkCommandRequiresVersionedPromptProfile()
     {
         var arguments = CreateBenchmarkArguments().ToList();

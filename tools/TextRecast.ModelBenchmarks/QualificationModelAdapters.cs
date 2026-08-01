@@ -8,7 +8,8 @@ internal static class QualificationModelAdapters
 {
     public static QualificationModelAdapterBase Resolve(
         string adapterId,
-        QualificationPromptProfile promptProfile)
+        QualificationPromptProfile promptProfile,
+        string? samplingProfileId = null)
     {
         if (!promptProfile.AdapterId.Equals(adapterId, StringComparison.Ordinal))
         {
@@ -19,15 +20,40 @@ internal static class QualificationModelAdapters
 
         return adapterId switch
         {
-            Qwen25ModelAdapter.AdapterId => new Qwen25QualificationAdapter(promptProfile),
-            Qwen35QualificationAdapter.AdapterId => new Qwen35QualificationAdapter(promptProfile),
-            Phi4MiniQualificationAdapter.AdapterId => new Phi4MiniQualificationAdapter(promptProfile),
-            Ministral3QualificationAdapter.AdapterId => new Ministral3QualificationAdapter(promptProfile),
-            Granite41QualificationAdapter.AdapterId => new Granite41QualificationAdapter(promptProfile),
+            Qwen25ModelAdapter.AdapterId => ResolveGreedyOnly(
+                new Qwen25QualificationAdapter(promptProfile),
+                samplingProfileId),
+            Qwen35QualificationAdapter.AdapterId => new Qwen35QualificationAdapter(
+                promptProfile,
+                samplingProfileId),
+            Phi4MiniQualificationAdapter.AdapterId => ResolveGreedyOnly(
+                new Phi4MiniQualificationAdapter(promptProfile),
+                samplingProfileId),
+            Ministral3QualificationAdapter.AdapterId => ResolveGreedyOnly(
+                new Ministral3QualificationAdapter(promptProfile),
+                samplingProfileId),
+            Granite41QualificationAdapter.AdapterId => ResolveGreedyOnly(
+                new Granite41QualificationAdapter(promptProfile),
+                samplingProfileId),
             _ => throw new ArgumentException(
                 $"Unknown qualification adapter '{adapterId}'.",
                 nameof(adapterId))
         };
+    }
+
+    private static QualificationModelAdapterBase ResolveGreedyOnly(
+        QualificationModelAdapterBase adapter,
+        string? samplingProfileId)
+    {
+        if (samplingProfileId is not null &&
+            !samplingProfileId.Equals(adapter.SamplingProfileId, StringComparison.Ordinal))
+        {
+            throw new ArgumentException(
+                $"Adapter '{adapter.Id}' supports only sampling profile '{adapter.SamplingProfileId}'.",
+                nameof(samplingProfileId));
+        }
+
+        return adapter;
     }
 }
 
@@ -131,28 +157,49 @@ internal sealed class Qwen25QualificationAdapter(QualificationPromptProfile prom
     }
 }
 
-internal sealed class Qwen35QualificationAdapter(QualificationPromptProfile promptProfile)
-    : QualificationModelAdapterBase(promptProfile)
+internal sealed class Qwen35QualificationAdapter : QualificationModelAdapterBase
 {
     public const string AdapterId = "qwen3.5-chatml";
+    public const string DefaultSamplingProfileId = "qwen3.5-default-v1";
+    public const string GreedySamplingProfileId = "greedy-v1";
     private static readonly IReadOnlyList<string> Stops =
         Array.AsReadOnly(["<|im_end|>", "<|im_start|>"]);
+    private readonly bool _usesGreedySampling;
+
+    public Qwen35QualificationAdapter(
+        QualificationPromptProfile promptProfile,
+        string? samplingProfileId = null)
+        : base(promptProfile)
+    {
+        _usesGreedySampling = samplingProfileId switch
+        {
+            null or DefaultSamplingProfileId => false,
+            GreedySamplingProfileId => true,
+            _ => throw new ArgumentException(
+                $"Unsupported Qwen 3.5 sampling profile '{samplingProfileId}'.",
+                nameof(samplingProfileId))
+        };
+    }
 
     public override string Id => AdapterId;
 
     public override string ChatTemplateId => "qwen3.5-chatml-nonthinking-v1";
 
-    public override string SamplingProfileId => "qwen3.5-default-v1";
+    public override string SamplingProfileId => _usesGreedySampling
+        ? GreedySamplingProfileId
+        : DefaultSamplingProfileId;
 
-    public override string SamplingPipelineId => nameof(DefaultSamplingPipeline);
+    public override string SamplingPipelineId => _usesGreedySampling
+        ? nameof(GreedySamplingPipeline)
+        : nameof(DefaultSamplingPipeline);
 
-    public override uint? SamplingSeed => 42;
+    public override uint? SamplingSeed => _usesGreedySampling ? null : 42;
 
-    public override float? SamplingTemperature => 0.7f;
+    public override float? SamplingTemperature => _usesGreedySampling ? null : 0.7f;
 
-    public override float? SamplingTopP => 0.8f;
+    public override float? SamplingTopP => _usesGreedySampling ? null : 0.8f;
 
-    public override int? SamplingTopK => 20;
+    public override int? SamplingTopK => _usesGreedySampling ? null : 20;
 
     public override IReadOnlyList<string> StopSequences => Stops;
 
@@ -169,6 +216,11 @@ internal sealed class Qwen35QualificationAdapter(QualificationPromptProfile prom
 
     public override ISamplingPipeline CreateSamplingPipeline()
     {
+        if (_usesGreedySampling)
+        {
+            return new GreedySamplingPipeline();
+        }
+
         return new DefaultSamplingPipeline
         {
             Temperature = SamplingTemperature ?? throw new InvalidOperationException(

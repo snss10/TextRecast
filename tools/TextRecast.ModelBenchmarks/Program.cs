@@ -54,7 +54,8 @@ internal static class Program
             options.PromptProfileId);
         var adapter = QualificationModelAdapters.Resolve(
             options.AdapterId,
-            promptProfile);
+            promptProfile,
+            options.SamplingProfileId);
         var modelPath = Path.GetFullPath(options.ModelPath);
         if (!File.Exists(modelPath))
         {
@@ -453,7 +454,8 @@ internal sealed record BenchmarkOptions(
     int ThreadCount,
     int Iterations,
     ModelQualificationCorpusScope CorpusScope,
-    string PromptProfileId)
+    string PromptProfileId,
+    string? SamplingProfileId)
 {
     public const string Usage =
         "Usage: --model <local.gguf> --model-id <id> --adapter <adapter-id> " +
@@ -462,7 +464,8 @@ internal sealed record BenchmarkOptions(
         "--source-license <SPDX> --quantization <Q5_K_M> --expected-sha <sha256> " +
         "--expected-size <bytes> [--context 4096] [--max-output 768] " +
         "[--threads 1-64] [--iterations 1-10] " +
-        "[--corpus-scope prompt-development|prompt-validation|final-qualification]";
+        "[--corpus-scope prompt-development|prompt-validation|final-qualification] " +
+        "[--sampling-profile <profile-id>]";
 
     public static BenchmarkOptions Parse(IReadOnlyList<string> args)
     {
@@ -485,7 +488,7 @@ internal sealed record BenchmarkOptions(
             "--model", "--model-id", "--adapter", "--output", "--source-repo",
             "--source-revision", "--source-license", "--quantization", "--expected-sha",
             "--expected-size", "--context", "--max-output", "--threads", "--iterations",
-            "--corpus-scope", "--prompt-profile"
+            "--corpus-scope", "--prompt-profile", "--sampling-profile"
         };
         var unknown = values.Keys.FirstOrDefault(key => !allowed.Contains(key));
         if (unknown is not null)
@@ -516,7 +519,8 @@ internal sealed record BenchmarkOptions(
                 64),
             ParseNumber(values, "--iterations", 3, 1, 10),
             ParseCorpusScope(values),
-            GetRequired(values, "--prompt-profile"));
+            GetRequired(values, "--prompt-profile"),
+            values.GetValueOrDefault("--sampling-profile"));
     }
 
     private static ModelQualificationCorpusScope ParseCorpusScope(
