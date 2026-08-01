@@ -26,6 +26,8 @@
         <ContextMenu>
             <MenuItem Header="Format with TextRecast" Click="FormatSelectedText_Click" />
             <Separator />
+            <MenuItem Header="Model information..." Click="ModelInformation_Click" />
+            <Separator />
             <MenuItem Header="Quit TextRecast" Click="Quit_Click" />
         </ContextMenu>
     </Window.ContextMenu>

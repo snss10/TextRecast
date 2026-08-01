@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.IO;
 using System.Net.Http;
 using System.Windows;
@@ -15,16 +16,23 @@ namespace TextRecast.App.Presentation;
 public partial class ModelDownloadWindow : Window
 {
     private readonly SlmModelInstaller _installer;
+    private readonly SlmModelProfile _profile;
     private CancellationTokenSource? _downloadCancellation;
     private bool _downloadStarted;
     private bool _downloadSucceeded;
     private bool _isDownloadInProgress;
     private bool _isClosing;
 
-    public ModelDownloadWindow(SlmModelInstaller installer)
+    public ModelDownloadWindow(SlmModelInstaller installer, SlmModelProfile profile)
     {
-        _installer = installer;
+        _installer = installer ?? throw new ArgumentNullException(nameof(installer));
+        _profile = profile ?? throw new ArgumentNullException(nameof(profile));
         InitializeComponent();
+        HeaderTextBlock.Text = $"Downloading {_profile.DisplayName}";
+        SetupSubtitleTextBlock.Text = $"{FormatRole(_profile.Role)} | {_profile.LanguageSupport}";
+        IntroductionTextBlock.Text =
+            $"TextRecast will download {FormatBytes(_profile.ExpectedFileSize)} for {_profile.DisplayName}. " +
+            "It stays on this computer and is used privately for formatting.";
     }
 
     public string? InstalledModelPath { get; private set; }
@@ -240,5 +248,17 @@ public partial class ModelDownloadWindow : Window
         }
 
         return $"{Math.Max((int)Math.Ceiling(duration.TotalSeconds), 1)}s";
+    }
+
+    private static string FormatRole(SlmModelRole role)
+    {
+        return role switch
+        {
+            SlmModelRole.Fast => "Fast / default",
+            SlmModelRole.Balanced => "Balanced",
+            SlmModelRole.Quality => "Best quality",
+            SlmModelRole.Alternative => "Alternative",
+            _ => throw new ArgumentOutOfRangeException(nameof(role))
+        };
     }
 }

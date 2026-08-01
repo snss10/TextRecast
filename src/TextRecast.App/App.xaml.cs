@@ -5,6 +5,7 @@ using System.Security.Principal;
 using System.Windows;
 using TextRecast.App.Presentation;
 using TextRecast.Core.Application;
+using TextRecast.Infrastructure.Hardware;
 using TextRecast.Infrastructure.SLM;
 using TextRecast.Infrastructure.Windows.Replacement;
 using TextRecast.Infrastructure.Windows.Selection;
@@ -34,30 +35,108 @@ public partial class App : global::System.Windows.Application
             return;
         }
 
-        var modelProfile = SlmModelCatalog.Default;
-        _modelDownloadClient = CreateModelDownloadClient();
-        var modelInstaller = new SlmModelInstaller(
-            modelProfile,
-            _modelDownloadClient,
-            Path.Combine(AppContext.BaseDirectory, "Models"),
-            Path.Combine(
+        _ = StartAsync();
+    }
+
+    private async Task StartAsync()
+    {
+        try
+        {
+            var profiles = SlmModelCatalog.All;
+            var packagedModelDirectory = Path.Combine(AppContext.BaseDirectory, "Models");
+            var userModelDirectory = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "TextRecast",
-                "Models"));
-        var modelPath = modelInstaller.FindInstalledModel();
-        if (modelPath is null)
-        {
-            var downloadWindow = new ModelDownloadWindow(modelInstaller);
-            if (downloadWindow.ShowDialog() != true ||
-                string.IsNullOrWhiteSpace(downloadWindow.InstalledModelPath))
+                "Models");
+
+            _modelDownloadClient = CreateModelDownloadClient();
+            var installers = profiles.ToDictionary(
+                profile => profile.Id,
+                profile => new SlmModelInstaller(
+                    profile,
+                    _modelDownloadClient,
+                    packagedModelDirectory,
+                    userModelDirectory),
+                StringComparer.Ordinal);
+            var installedPaths = installers
+                .Select(pair => (pair.Key, Path: pair.Value.FindInstalledModel()))
+                .Where(item => item.Path is not null)
+                .ToDictionary(item => item.Key, item => item.Path!, StringComparer.Ordinal);
+
+            var settingsStore = new ModelSelectionSettingsStore(profiles.Select(profile => profile.Id));
+            var settings = await settingsStore.LoadAsync();
+            var choices = CreateModelChoices(profiles, installedPaths.Keys, userModelDirectory);
+            var selectedChoice = settings.ActiveModelId is string activeModelId
+                ? choices.FirstOrDefault(choice =>
+                    choice.IsCompatible &&
+                    choice.IsInstalled &&
+                    choice.Profile.Id.Equals(activeModelId, StringComparison.Ordinal))
+                : null;
+
+            SlmModelProfile modelProfile;
+            string modelPath;
+            if (selectedChoice is not null)
             {
-                Shutdown();
-                return;
+                modelProfile = selectedChoice.Profile;
+                modelPath = installedPaths[modelProfile.Id];
+            }
+            else
+            {
+                var initialModelId = choices.Any(choice =>
+                    choice.IsCompatible &&
+                    choice.Profile.Id.Equals(settings.ActiveModelId, StringComparison.Ordinal))
+                    ? settings.ActiveModelId!
+                    : SlmModelCatalog.Default.Id;
+                var selectionWindow = new ModelSelectionWindow(choices, initialModelId);
+                if (selectionWindow.ShowDialog() != true || selectionWindow.SelectedProfile is null)
+                {
+                    Shutdown();
+                    return;
+                }
+
+                modelProfile = selectionWindow.SelectedProfile;
+                var modelInstaller = installers[modelProfile.Id];
+                modelPath = modelInstaller.FindInstalledModel() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(modelPath))
+                {
+                    var downloadWindow = new ModelDownloadWindow(modelInstaller, modelProfile);
+                    if (downloadWindow.ShowDialog() != true ||
+                        string.IsNullOrWhiteSpace(downloadWindow.InstalledModelPath))
+                    {
+                        Shutdown();
+                        return;
+                    }
+
+                    modelPath = downloadWindow.InstalledModelPath;
+                }
+
+                await settingsStore.SaveAsync(new ModelSelectionSettings
+                {
+                    Mode = ModelSelectionMode.Manual,
+                    ActiveModelId = modelProfile.Id
+                });
             }
 
-            modelPath = downloadWindow.InstalledModelPath;
+            StartMainWindow(modelProfile, modelPath);
         }
+        catch (Exception exception) when (exception is
+            HardwareInspectionException or
+            IOException or
+            UnauthorizedAccessException or
+            InvalidOperationException or
+            ArgumentException)
+        {
+            MessageBox.Show(
+                $"TextRecast could not complete model setup.\n\n{exception.Message}",
+                "TextRecast setup",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+            Shutdown();
+        }
+    }
 
+    private void StartMainWindow(SlmModelProfile modelProfile, string modelPath)
+    {
         var selectionReader = new UiAutomationSelectionReader();
         var selectionCapture = new SelectionCaptureService(selectionReader);
         var replacement = new WindowsTextReplacementService(selectionReader);
@@ -68,9 +147,68 @@ public partial class App : global::System.Windows.Application
         });
         var workflow = new FormatTextWorkflow(selectionCapture, _formatter, replacement);
 
-        MainWindow = new MainWindow(workflow);
+        MainWindow = new MainWindow(workflow, modelProfile);
         MainWindow.Show();
         ShutdownMode = ShutdownMode.OnMainWindowClose;
+    }
+
+    private static ModelSelectionChoice[] CreateModelChoices(
+        IReadOnlyList<SlmModelProfile> profiles,
+        IEnumerable<string> installedModelIds,
+        string userModelDirectory)
+    {
+        var installedIds = new HashSet<string>(installedModelIds, StringComparer.Ordinal);
+        HardwareProfile? hardware = null;
+        try
+        {
+            hardware = new HardwareInspector().Inspect(userModelDirectory);
+        }
+        catch (HardwareInspectionException)
+        {
+        }
+
+        var recommendedId = hardware is null
+            ? SlmModelCatalog.Default.Id
+            : SlmModelRecommender.Recommend(hardware, profiles, installedIds)
+                .RecommendedProfile?.Id ?? SlmModelCatalog.Default.Id;
+
+        return profiles.Select(profile =>
+        {
+            var isInstalled = installedIds.Contains(profile.Id);
+            if (profile.Requirements is null)
+            {
+                var compatibility = hardware is null
+                    ? "Hardware details are unavailable; the established default remains selectable."
+                    : "Established default. Review every generated result before replacement.";
+                return new ModelSelectionChoice(
+                    profile,
+                    IsCompatible: true,
+                    isInstalled,
+                    profile.Id.Equals(recommendedId, StringComparison.Ordinal),
+                    compatibility);
+            }
+
+            if (hardware is null)
+            {
+                return new ModelSelectionChoice(
+                    profile,
+                    IsCompatible: false,
+                    isInstalled,
+                    IsRecommended: false,
+                    "Unavailable because TextRecast could not inspect memory, CPU, and storage requirements.");
+            }
+
+            var assessment = SlmModelRecommender.Assess(hardware, profile, isInstalled);
+            var compatibilityText = assessment.IsEligible
+                ? "Compatible with the currently available memory, CPU, and model storage."
+                : "Currently unavailable: " + string.Join(" ", assessment.RejectionReasons);
+            return new ModelSelectionChoice(
+                profile,
+                assessment.IsEligible,
+                isInstalled,
+                profile.Id.Equals(recommendedId, StringComparison.Ordinal),
+                compatibilityText);
+        }).ToArray();
     }
 
     protected override void OnExit(ExitEventArgs e)
