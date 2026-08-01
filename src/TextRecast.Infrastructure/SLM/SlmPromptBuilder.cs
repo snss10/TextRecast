@@ -94,6 +94,26 @@ internal static class SlmPromptBuilder
         };
     }
 
+    internal static string BuildGranite41BalancedTask(FormatTextRequest request)
+    {
+        return request.Operation switch
+        {
+            FormatOperation.Improve =>
+                "Correct spelling, grammar, punctuation, and unclear wording while keeping factual status, meaning, detail, structure, and tone.",
+            FormatOperation.Shorten =>
+                "Make the source more concise by removing redundancy. Preserve actors, recurrence, responsibility, reasons, conditions, outcome, and deadline meaning.",
+            FormatOperation.Lengthen =>
+                "Rewrite terse wording as complete natural prose. Clarify grammar, keep unknown referents general, and add no deadline, rationale, fact, or requirement.",
+            FormatOperation.Summarize =>
+                "Write a shorter coherent account that keeps essential actors, chronology, cause, action, outcome, impact, and next step.",
+            FormatOperation.ChangeTone when request.Tone is ToneStyle tone =>
+                $"Make the style clearly {GetToneDescription(tone)} while preserving exact roles, recurrence, urgency, conditions, facts, and relative-time meaning.",
+            FormatOperation.ChangeTone =>
+                throw new ArgumentException("A tone is required for Change tone.", nameof(request)),
+            _ => throw new ArgumentOutOfRangeException(nameof(request))
+        };
+    }
+
     private static string BuildToneTask(ToneStyle tone)
     {
         return tone switch

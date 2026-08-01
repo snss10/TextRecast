@@ -181,6 +181,20 @@ public sealed class SlmModelRecommenderTests
     }
 
     [TestMethod]
+    public void GraniteAlternativeIsEligibleOnlyWhenMeasuredRequirementsFit()
+    {
+        var eligible = SlmModelRecommender.Assess(
+            CreateHardware(availableMemory: 6 * Gibibyte, availableStorage: 4 * Gibibyte),
+            SlmModelCatalog.Granite41Alternative);
+        var lowMemory = SlmModelRecommender.Assess(
+            CreateHardware(availableMemory: 3 * Gibibyte, availableStorage: 4 * Gibibyte),
+            SlmModelCatalog.Granite41Alternative);
+
+        Assert.IsTrue(eligible.IsEligible);
+        Assert.IsFalse(lowMemory.IsEligible);
+    }
+
+    [TestMethod]
     public void RequiredAvailableMemoryIncludesThirtyPercentAndFixedReserve()
     {
         var required = SlmModelRecommender.CalculateRequiredAvailableMemory(2 * Gibibyte);

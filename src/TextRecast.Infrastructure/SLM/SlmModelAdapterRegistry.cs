@@ -14,7 +14,8 @@ public sealed class SlmModelAdapterRegistry
         new Dictionary<string, Func<SlmModelProfile, ISlmModelAdapter>>(StringComparer.Ordinal)
         {
             [Qwen25ModelAdapter.AdapterId] = _ => new Qwen25ModelAdapter(),
-            [Qwen35ModelAdapter.AdapterId] = profile => new Qwen35ModelAdapter(profile)
+            [Qwen35ModelAdapter.AdapterId] = profile => new Qwen35ModelAdapter(profile),
+            [Granite41ModelAdapter.AdapterId] = profile => new Granite41ModelAdapter(profile)
         });
 
     public ISlmModelAdapter Resolve(SlmModelProfile profile)

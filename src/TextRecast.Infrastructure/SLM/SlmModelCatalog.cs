@@ -5,6 +5,7 @@ public static class SlmModelCatalog
     private const string DefaultFileName = "qwen2.5-1.5b-instruct-q4_k_m.gguf";
     private const string Qwen35BalancedRevision = "f6d5376be1edb4d416d56da11e5397a961aca8ae";
     private const string Qwen35QualityRevision = "e87f176479d0855a907a41277aca2f8ee7a09523";
+    private const string Granite41AlternativeRevision = "ab4701481089b58a082ef63cc1cee738887293ff";
 
     public static SlmModelProfile Default { get; } = new()
     {
@@ -95,8 +96,40 @@ public static class SlmModelCatalog
         MaxOutputTokens = 768
     };
 
+    public static SlmModelProfile Granite41Alternative { get; } = new()
+    {
+        Id = "Granite-4.1-3B-Q5_K_M",
+        DisplayName = "Granite 4.1 3B",
+        Role = SlmModelRole.Alternative,
+        Description = "Experimental IBM model-family alternative for users who want another local option.",
+        LanguageSupport = "English",
+        LimitationNotice =
+            "Experimental. This model showed more semantic drift, especially in summaries and conditions; verify meaning, status, actors, and deadlines carefully.",
+        IsExperimental = true,
+        AdapterId = Granite41ModelAdapter.AdapterId,
+        PromptProfileId = Granite41ModelAdapter.BalancedPromptProfileId,
+        SamplingProfileId = Granite41ModelAdapter.GreedySamplingProfileId,
+        FileName = "granite-4.1-3b-Q5_K_M.gguf",
+        DownloadUri = new Uri(
+            $"https://huggingface.co/ibm-granite/granite-4.1-3b-GGUF/resolve/{Granite41AlternativeRevision}/granite-4.1-3b-Q5_K_M.gguf?download=true"),
+        ExpectedSha256 = "f7724d259f29b0edf147144ac530ca26f91c97af8274249f933073c461678a3c",
+        ExpectedFileSize = 2437012064,
+        SourceRepository = "ibm-granite/granite-4.1-3b-GGUF",
+        SourceRevision = Granite41AlternativeRevision,
+        LicenseExpression = "Apache-2.0",
+        Requirements = new SlmModelRequirements
+        {
+            Tier = SlmModelTier.Balanced,
+            QualityScore = 9.49,
+            PeakWorkingSetBytes = 2896392192,
+            MeasuredTokensPerSecond = 9.13
+        },
+        ContextSize = 4096,
+        MaxOutputTokens = 768
+    };
+
     public static IReadOnlyList<SlmModelProfile> All { get; } =
-        Array.AsReadOnly([Default, Qwen35Balanced, Qwen35Quality]);
+        Array.AsReadOnly([Default, Qwen35Balanced, Qwen35Quality, Granite41Alternative]);
 
     public static SlmModelProfile GetById(string modelId)
     {
