@@ -74,6 +74,26 @@ internal static class SlmPromptBuilder
         };
     }
 
+    internal static string BuildQwen35LargeBalancedTask(FormatTextRequest request)
+    {
+        return request.Operation switch
+        {
+            FormatOperation.Improve =>
+                "Correct errors and improve clarity or flow without altering the passage's claims, status, detail, structure, or tone.",
+            FormatOperation.Shorten =>
+                "Remove repetition and low-value phrasing while retaining recurrence, responsibility, cause, conditions, outcome, impact, and deadline meaning.",
+            FormatOperation.Lengthen =>
+                "Develop terse wording into complete natural prose by clarifying grammar and stated relationships. Keep ambiguous references unresolved and add no facts.",
+            FormatOperation.Summarize =>
+                "Create a genuinely shorter coherent account that retains the essential actors, chronology, cause, action, outcome, impact, and next step.",
+            FormatOperation.ChangeTone when request.Tone is ToneStyle tone =>
+                $"Make the language distinctly {GetToneDescription(tone)} while retaining role labels, facts, urgency, conditions, and relative-time meaning.",
+            FormatOperation.ChangeTone =>
+                throw new ArgumentException("A tone is required for Change tone.", nameof(request)),
+            _ => throw new ArgumentOutOfRangeException(nameof(request))
+        };
+    }
+
     private static string BuildToneTask(ToneStyle tone)
     {
         return tone switch

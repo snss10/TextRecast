@@ -7,13 +7,17 @@ public sealed class Qwen35ModelAdapter : ISlmModelAdapter
 {
     public const string AdapterId = "qwen3.5-chatml";
     public const string BalancedPromptProfileId = "qwen35-2b-balanced-v3";
+    public const string QualityPromptProfileId = "qwen35-4b-balanced-v3";
     public const string DefaultSamplingProfileId = "qwen3.5-default-v1";
 
-    private const string SystemInstruction =
+    private const string BalancedSystemInstruction =
         "Carry out the task on the source. Change wording and detail only as the task calls for, while preserving real-world meaning. Do not turn facts into advice, success into failure, or suggestions into requirements. Retain actors, responsibility, causes, conditions, recurrence, negation, names, numbers, and deadline wording. Invent nothing and return only the edit. Do not explain or show reasoning.";
+    private const string QualitySystemInstruction =
+        "Apply the task to the complete source. Meaning is invariant, while wording and supporting detail may change as the task requires. Preserve actors, exact role labels, recurrence, status, conditions, chronology, causes, negation, names, numbers, relative-time phrases, and deadline wording. Do not infer a rationale or resolve ambiguity. Return only the rewrite. Do not explain or show reasoning.";
 
     private static readonly IReadOnlyList<string> Stops =
         Array.AsReadOnly(["<|im_end|>", "<|im_start|>"]);
+    private readonly string _promptProfileId;
 
     public Qwen35ModelAdapter(SlmModelProfile profile)
     {
@@ -25,7 +29,7 @@ public sealed class Qwen35ModelAdapter : ISlmModelAdapter
                 nameof(profile));
         }
 
-        if (!profile.PromptProfileId.Equals(BalancedPromptProfileId, StringComparison.Ordinal))
+        if (profile.PromptProfileId is not (BalancedPromptProfileId or QualityPromptProfileId))
         {
             throw new ArgumentException(
                 $"Unsupported Qwen 3.5 prompt profile '{profile.PromptProfileId}'.",
@@ -38,6 +42,8 @@ public sealed class Qwen35ModelAdapter : ISlmModelAdapter
                 $"Unsupported Qwen 3.5 sampling profile '{profile.SamplingProfileId}'.",
                 nameof(profile));
         }
+
+        _promptProfileId = profile.PromptProfileId;
     }
 
     public string Id => AdapterId;
@@ -47,9 +53,14 @@ public sealed class Qwen35ModelAdapter : ISlmModelAdapter
     public string BuildPrompt(FormatTextRequest request)
     {
         var source = EscapeChatControlTokens(request.Text);
-        var task = SlmPromptBuilder.BuildQwen35SmallBalancedTask(request);
+        var systemInstruction = _promptProfileId == BalancedPromptProfileId
+            ? BalancedSystemInstruction
+            : QualitySystemInstruction;
+        var task = _promptProfileId == BalancedPromptProfileId
+            ? SlmPromptBuilder.BuildQwen35SmallBalancedTask(request)
+            : SlmPromptBuilder.BuildQwen35LargeBalancedTask(request);
         var userContent = SlmPromptBuilder.BuildUserContent(task, source);
-        return $"<|im_start|>system\n{SystemInstruction}<|im_end|>\n" +
+        return $"<|im_start|>system\n{systemInstruction}<|im_end|>\n" +
                $"<|im_start|>user\n{userContent}<|im_end|>\n" +
                "<|im_start|>assistant\n<think>\n\n</think>\n\n";
     }

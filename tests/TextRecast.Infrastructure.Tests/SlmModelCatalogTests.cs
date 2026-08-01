@@ -33,7 +33,7 @@ public sealed class SlmModelCatalogTests
     {
         var profile = SlmModelCatalog.Qwen35Balanced;
 
-        Assert.HasCount(2, SlmModelCatalog.All);
+        Assert.HasCount(3, SlmModelCatalog.All);
         Assert.AreSame(profile, SlmModelCatalog.GetById(profile.Id));
         Assert.AreEqual("Qwen3.5-2B-Q5_K_M", profile.Id);
         Assert.AreEqual("Qwen 3.5 2B", profile.DisplayName);
@@ -54,6 +54,29 @@ public sealed class SlmModelCatalogTests
         Assert.AreEqual("Apache-2.0", profile.LicenseExpression);
         Assert.AreEqual(1708875776L, profile.Requirements!.PeakWorkingSetBytes);
         Assert.AreEqual(14.20, profile.Requirements.MeasuredTokensPerSecond);
+    }
+
+    [TestMethod]
+    public void CatalogIncludesExactQwen35QualityProfile()
+    {
+        var profile = SlmModelCatalog.Qwen35Quality;
+
+        Assert.AreSame(profile, SlmModelCatalog.GetById(profile.Id));
+        Assert.AreEqual("Qwen3.5-4B-Q5_K_M", profile.Id);
+        Assert.AreEqual("Qwen 3.5 4B", profile.DisplayName);
+        Assert.AreEqual(SlmModelRole.Quality, profile.Role);
+        Assert.IsTrue(profile.IsExperimental);
+        StringAssert.Contains(profile.LimitationNotice, "deadline wording");
+        Assert.AreEqual(Qwen35ModelAdapter.QualityPromptProfileId, profile.PromptProfileId);
+        Assert.AreEqual("Qwen3.5-4B-Q5_K_M.gguf", profile.FileName);
+        Assert.AreEqual(3143656608L, profile.ExpectedFileSize);
+        Assert.AreEqual(
+            "8814232b85594dcd46c50e5b8b29324a7efe9e746edbe8a3d1df3d3fce7aad39",
+            profile.ExpectedSha256);
+        Assert.AreEqual("unsloth/Qwen3.5-4B-GGUF", profile.SourceRepository);
+        Assert.AreEqual("e87f176479d0855a907a41277aca2f8ee7a09523", profile.SourceRevision);
+        Assert.AreEqual(3515650048L, profile.Requirements!.PeakWorkingSetBytes);
+        Assert.AreEqual(6.27, profile.Requirements.MeasuredTokensPerSecond);
     }
 
     [TestMethod]

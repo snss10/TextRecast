@@ -4,6 +4,7 @@ public static class SlmModelCatalog
 {
     private const string DefaultFileName = "qwen2.5-1.5b-instruct-q4_k_m.gguf";
     private const string Qwen35BalancedRevision = "f6d5376be1edb4d416d56da11e5397a961aca8ae";
+    private const string Qwen35QualityRevision = "e87f176479d0855a907a41277aca2f8ee7a09523";
 
     public static SlmModelProfile Default { get; } = new()
     {
@@ -62,8 +63,40 @@ public static class SlmModelCatalog
         MaxOutputTokens = 768
     };
 
+    public static SlmModelProfile Qwen35Quality { get; } = new()
+    {
+        Id = "Qwen3.5-4B-Q5_K_M",
+        DisplayName = "Qwen 3.5 4B",
+        Role = SlmModelRole.Quality,
+        Description = "Largest TextRecast option for higher-capability computers.",
+        LanguageSupport = "English",
+        LimitationNotice =
+            "Experimental. It may occasionally assign unsupported roles or titles or alter deadline wording; carefully review every result.",
+        IsExperimental = true,
+        AdapterId = Qwen35ModelAdapter.AdapterId,
+        PromptProfileId = Qwen35ModelAdapter.QualityPromptProfileId,
+        SamplingProfileId = Qwen35ModelAdapter.DefaultSamplingProfileId,
+        FileName = "Qwen3.5-4B-Q5_K_M.gguf",
+        DownloadUri = new Uri(
+            $"https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/{Qwen35QualityRevision}/Qwen3.5-4B-Q5_K_M.gguf?download=true"),
+        ExpectedSha256 = "8814232b85594dcd46c50e5b8b29324a7efe9e746edbe8a3d1df3d3fce7aad39",
+        ExpectedFileSize = 3143656608,
+        SourceRepository = "unsloth/Qwen3.5-4B-GGUF",
+        SourceRevision = Qwen35QualityRevision,
+        LicenseExpression = "Apache-2.0",
+        Requirements = new SlmModelRequirements
+        {
+            Tier = SlmModelTier.Quality,
+            QualityScore = 9.75,
+            PeakWorkingSetBytes = 3515650048,
+            MeasuredTokensPerSecond = 6.27
+        },
+        ContextSize = 4096,
+        MaxOutputTokens = 768
+    };
+
     public static IReadOnlyList<SlmModelProfile> All { get; } =
-        Array.AsReadOnly([Default, Qwen35Balanced]);
+        Array.AsReadOnly([Default, Qwen35Balanced, Qwen35Quality]);
 
     public static SlmModelProfile GetById(string modelId)
     {

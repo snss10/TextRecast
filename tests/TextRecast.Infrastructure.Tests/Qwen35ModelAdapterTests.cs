@@ -71,6 +71,21 @@ public sealed class Qwen35ModelAdapterTests
             SlmModelCatalog.Qwen35Balanced with { SamplingProfileId = "greedy-v1" }));
     }
 
+    [TestMethod]
+    public void QualityProfileUsesItsReviewedLargeModelPrompt()
+    {
+        var adapter = new Qwen35ModelAdapter(SlmModelCatalog.Qwen35Quality);
+        var request = new FormatTextRequest(
+            "The release finished after Noor approved it.",
+            FormatOperation.Shorten);
+
+        var prompt = adapter.BuildPrompt(request);
+
+        StringAssert.Contains(prompt, "Meaning is invariant");
+        StringAssert.Contains(prompt, "Remove repetition and low-value phrasing");
+        StringAssert.Contains(prompt, "relative-time phrases");
+    }
+
     private static int CountOccurrences(string value, string expected)
     {
         return value.Split(expected, StringSplitOptions.None).Length - 1;

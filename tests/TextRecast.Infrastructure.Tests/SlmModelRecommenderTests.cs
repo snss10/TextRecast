@@ -82,6 +82,32 @@ public sealed class SlmModelRecommenderTests
     }
 
     [TestMethod]
+    public void RecommendPrefersHigherTierWhenEligibleScoresAreClose()
+    {
+        var balanced = CreateProfile(
+            "balanced-close-score",
+            SlmModelTier.Balanced,
+            qualityScore: 9.8,
+            peakWorkingSetBytes: 2 * Gibibyte,
+            measuredTokensPerSecond: 12,
+            expectedFileSize: 2 * Gibibyte);
+        var quality = CreateProfile(
+            "quality-close-score",
+            SlmModelTier.Quality,
+            qualityScore: 9.7,
+            peakWorkingSetBytes: 3 * Gibibyte,
+            measuredTokensPerSecond: 8,
+            expectedFileSize: 3 * Gibibyte);
+
+        var result = SlmModelRecommender.Recommend(
+            CreateHardware(availableMemory: 8 * Gibibyte, availableStorage: 8 * Gibibyte),
+            [balanced, quality]);
+
+        Assert.AreSame(quality, result.RecommendedProfile);
+        StringAssert.Contains(result.Reason, "Quality tier");
+    }
+
+    [TestMethod]
     public void AssessRejectsLowTemporaryMemoryAndInsufficientStorage()
     {
         var lowMemory = SlmModelRecommender.Assess(

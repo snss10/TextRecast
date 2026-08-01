@@ -34,4 +34,13 @@ public sealed class SlmModelAdapterRegistryTests
         Assert.IsInstanceOfType<Qwen35ModelAdapter>(adapter);
         Assert.AreEqual(Qwen35ModelAdapter.AdapterId, adapter.Id);
     }
+
+    [TestMethod]
+    public void DefaultResolvesQwen35AdapterFromQualityProfile()
+    {
+        var adapter = SlmModelAdapterRegistry.Default.Resolve(SlmModelCatalog.Qwen35Quality);
+
+        Assert.IsInstanceOfType<Qwen35ModelAdapter>(adapter);
+        Assert.AreEqual(Qwen35ModelAdapter.AdapterId, adapter.Id);
+    }
 }
