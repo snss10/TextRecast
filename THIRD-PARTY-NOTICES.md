@@ -65,14 +65,15 @@ The above copyright notice and this permission notice shall be included in all c
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-## Default SLM model
+## Optional local SLM models
 
-TextRecast downloads `Qwen2.5-1.5B-Instruct-GGUF` separately when a valid model is not already installed or packaged. The model repository declares the Apache License 2.0; it is not relicensed as part of TextRecast.
+TextRecast does not include a model in its normal release archive. After explicit user confirmation, it may separately download one of the following GGUF files. Each repository declares the Apache License 2.0; the model binary remains subject to its upstream terms and is not relicensed as part of TextRecast.
 
-- Model: `Qwen2.5-1.5B-Instruct-GGUF`
-- Quantization used by TextRecast: `Q4_K_M`
-- Source and model card: <https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF>
-- Upstream license: <https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/blob/main/LICENSE>
-- SPDX identifier: `Apache-2.0`
+| Model and quantization | Pinned source | SPDX license |
+| --- | --- | --- |
+| Qwen 2.5 1.5B Instruct `Q4_K_M` | <https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/tree/dd26da440ef0330c47919d1ecae0966d24022222> | `Apache-2.0` |
+| Qwen 3.5 2B `Q5_K_M` | <https://huggingface.co/unsloth/Qwen3.5-2B-GGUF/tree/f6d5376be1edb4d416d56da11e5397a961aca8ae> | `Apache-2.0` |
+| Qwen 3.5 4B `Q5_K_M` | <https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/tree/e87f176479d0855a907a41277aca2f8ee7a09523> | `Apache-2.0` |
+| Granite 4.1 3B `Q5_K_M` | <https://huggingface.co/ibm-granite/granite-4.1-3b-GGUF/tree/ab4701481089b58a082ef63cc1cee738887293ff> | `Apache-2.0` |
 
-Review the upstream model card and license before redistributing the model binary.
+Review the relevant upstream model card and license before redistributing a model binary. Exact filenames, sizes, and SHA-256 checksums are documented in `Models/README.md` and enforced by the application catalog.
