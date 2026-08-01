@@ -18,12 +18,15 @@ public sealed class SlmModelCatalogTests
         Assert.AreEqual(Qwen25ModelAdapter.AdapterId, profile.AdapterId);
         Assert.AreEqual("qwen2.5-1.5b-instruct-q4_k_m.gguf", profile.FileName);
         Assert.AreEqual(
-            "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf?download=true",
+            "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/dd26da440ef0330c47919d1ecae0966d24022222/qwen2.5-1.5b-instruct-q4_k_m.gguf?download=true",
             profile.DownloadUri.AbsoluteUri);
         Assert.AreEqual(1117320736L, profile.ExpectedFileSize);
         Assert.AreEqual(
             "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
             profile.ExpectedSha256);
+        Assert.AreEqual(
+            "dd26da440ef0330c47919d1ecae0966d24022222",
+            profile.SourceRevision);
         Assert.AreEqual(4096U, profile.ContextSize);
         Assert.AreEqual(768, profile.MaxOutputTokens);
     }
