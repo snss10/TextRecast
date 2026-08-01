@@ -13,7 +13,7 @@ public interface ISlmModelAdapter
 
     ISamplingPipeline CreateSamplingPipeline();
 
-    int GetExpectedOutputWordCount(FormatTextRequest request);
+    int GetOutputWordCapacity(FormatTextRequest request);
 
     string CleanOutput(string output);
 }

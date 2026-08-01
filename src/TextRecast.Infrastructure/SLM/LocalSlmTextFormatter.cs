@@ -13,8 +13,6 @@ namespace TextRecast.Infrastructure.SLM;
 public sealed class LocalSlmTextFormatter : ITextFormatter
 {
     private const int ContextSafetyMarginTokens = 32;
-    private const int MaxFinalSummaryCharacters = 6000;
-    private const int MaxChunkCharacters = 450;
     private const int MinimumOutputTokens = 64;
     private readonly SlmModelOptions _options;
     private readonly ISlmModelAdapter _adapter;
@@ -107,15 +105,17 @@ public sealed class LocalSlmTextFormatter : ITextFormatter
         {
             ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposeState) != 0, this);
             await EnsureModelLoadedAsync(linkedCancellation.Token);
-            var output = request.Operation == FormatOperation.Summarize &&
-                         request.Text.Length > MaxFinalSummaryCharacters
-                ? await FormatHierarchicalSummaryAsync(
-                    request,
-                    firstTokenObserved,
-                    linkedCancellation.Token)
-                : ShouldFormatInChunks(request)
-                    ? await FormatInChunksAsync(request, firstTokenObserved, linkedCancellation.Token)
-                    : await FormatSingleAsync(request, firstTokenObserved, linkedCancellation.Token);
+            var output = CanFormatSingle(request)
+                ? await FormatSingleAsync(request, firstTokenObserved, linkedCancellation.Token)
+                : request.Operation == FormatOperation.Summarize
+                    ? await FormatHierarchicalSummaryAsync(
+                        request,
+                        firstTokenObserved,
+                        linkedCancellation.Token)
+                    : await FormatInChunksAsync(
+                        request,
+                        firstTokenObserved,
+                        linkedCancellation.Token);
             EnsureOutputPresent(output);
             return output;
         }
@@ -130,7 +130,7 @@ public sealed class LocalSlmTextFormatter : ITextFormatter
         Action? firstTokenObserved,
         CancellationToken cancellationToken)
     {
-        var chunks = TextChunker.Split(request.Text, MaxChunkCharacters);
+        var chunks = SplitToFit(request);
         var output = new StringBuilder(request.Text.Length);
         foreach (var chunk in chunks)
         {
@@ -153,7 +153,7 @@ public sealed class LocalSlmTextFormatter : ITextFormatter
         CancellationToken cancellationToken)
     {
         var currentText = request.Text;
-        for (var level = 0; currentText.Length > MaxFinalSummaryCharacters; level++)
+        for (var level = 0; !CanFormatSingle(request with { Text = currentText }); level++)
         {
             if (level >= 8)
             {
@@ -162,7 +162,7 @@ public sealed class LocalSlmTextFormatter : ITextFormatter
             }
 
             var levelOutput = new StringBuilder(currentText.Length / 2);
-            foreach (var chunk in TextChunker.Split(currentText, MaxChunkCharacters))
+            foreach (var chunk in SplitToFit(request with { Text = currentText }))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var chunkRequest = request with { Text = chunk.Text };
@@ -201,10 +201,26 @@ public sealed class LocalSlmTextFormatter : ITextFormatter
             cancellationToken);
     }
 
-    private static bool ShouldFormatInChunks(FormatTextRequest request)
+    private IReadOnlyList<TextChunker.Chunk> SplitToFit(FormatTextRequest request)
     {
-        return request.Text.Length > MaxChunkCharacters &&
-               request.Operation != FormatOperation.Summarize;
+        var maximumCharacters = Math.Max(64, request.Text.Length - 1);
+        while (true)
+        {
+            var chunks = TextChunker.Split(request.Text, maximumCharacters);
+            if (chunks.Count > 1 && chunks.All(chunk =>
+                    CanFormatSingle(request with { Text = chunk.Text })))
+            {
+                return chunks;
+            }
+
+            if (maximumCharacters == 64)
+            {
+                throw new TextFormattingException(
+                    "This selection exceeds the local model's context capacity. Try a smaller section.");
+            }
+
+            maximumCharacters = Math.Max(64, maximumCharacters * 3 / 4);
+        }
     }
 
     public void Dispose()
@@ -264,12 +280,46 @@ public sealed class LocalSlmTextFormatter : ITextFormatter
                 "This selection exceeds the local model's context capacity. Try a smaller section.");
         }
 
-        var expectedOutputWords = _adapter.GetExpectedOutputWordCount(request);
-        var desiredTokens = Math.Clamp(
-            (int)Math.Ceiling(expectedOutputWords * 1.9) + 48,
-            MinimumOutputTokens,
+        var desiredTokens = Math.Min(
+            GetEstimatedOutputTokens(request),
             _options.Profile.MaxOutputTokens);
         return Math.Min(desiredTokens, availableTokens);
+    }
+
+    private bool CanFormatSingle(FormatTextRequest request)
+    {
+        var prompt = _adapter.BuildPrompt(request);
+        var promptTokens = _weights!.Tokenize(prompt, true, true, Encoding.UTF8).Length;
+        return CanFitSingleRequest(
+            promptTokens,
+            GetEstimatedOutputTokens(request),
+            checked((int)_options.Profile.ContextSize),
+            _options.Profile.MaxOutputTokens,
+            request.Operation is FormatOperation.Shorten or FormatOperation.Summarize);
+    }
+
+    internal static bool CanFitSingleRequest(
+        int promptTokens,
+        int estimatedOutputTokens,
+        int contextTokens,
+        int maximumOutputTokens,
+        bool outputMayBeCapped = false)
+    {
+        if (!outputMayBeCapped && estimatedOutputTokens > maximumOutputTokens)
+        {
+            return false;
+        }
+
+        var reservedOutputTokens = Math.Min(estimatedOutputTokens, maximumOutputTokens);
+        return (long)promptTokens + ContextSafetyMarginTokens + reservedOutputTokens <= contextTokens;
+    }
+
+    private int GetEstimatedOutputTokens(FormatTextRequest request)
+    {
+        var outputWordCapacity = _adapter.GetOutputWordCapacity(request);
+        return Math.Max(
+            MinimumOutputTokens,
+            checked((int)Math.Ceiling(outputWordCapacity * 1.9) + 48));
     }
 
     private static void EnsureOutputPresent(string output)

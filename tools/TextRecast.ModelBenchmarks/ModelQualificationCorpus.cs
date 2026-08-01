@@ -97,6 +97,11 @@ public static class ModelQualificationCorpus
             ToneStyle.Direct,
             "Hi, could you possibly reach out to Daniel and ask him to approve the budget by tomorrow?",
             required: ["Daniel", "budget", "tomorrow"]),
+        CreateTone(
+            "tone-professional-context-en",
+            ToneStyle.Professional,
+            "Priya sent the revised contract to Omar on Tuesday because the client found a pricing error. Omar has not approved it yet. Ask him to respond before noon Thursday, and do not contact Priya again.",
+            required: ["Priya", "Omar", "Tuesday", "Thursday", "noon"]),
         Create(
             "punctuation-heavy-en",
             "punctuation-heavy",
@@ -154,6 +159,9 @@ public static class ModelQualificationCorpus
             languageMarkers: ["ルーター", "十二"],
             maximumWords: 12)
     ]);
+
+    public static IReadOnlyList<ModelQualificationCase> English { get; } = Array.AsReadOnly(
+        All.Where(testCase => testCase.Language == "en").ToArray());
 
     private static ModelQualificationCase Create(
         string id,

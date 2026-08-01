@@ -95,15 +95,16 @@ internal static class Program
             throw new InvalidDataException("The independently calculated model SHA-256 did not match.");
         }
 
+        var corpus = ModelQualificationCorpus.English;
         var warmup = await formatter.FormatMeasuredAsync(
-            ModelQualificationCorpus.All[0].Request,
+            corpus[0].Request,
             CancellationToken.None);
 
         var results = new List<ModelQualificationResult>(
-            ModelQualificationCorpus.All.Count * options.Iterations);
+            corpus.Count * options.Iterations);
         for (var iteration = 1; iteration <= options.Iterations; iteration++)
         {
-            foreach (var testCase in ModelQualificationCorpus.All)
+            foreach (var testCase in corpus)
             {
                 var failureStopwatch = Stopwatch.StartNew();
                 try

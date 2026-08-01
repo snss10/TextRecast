@@ -43,6 +43,8 @@ public static partial class ModelQualificationEvaluator
         "<think>",
         "</think>",
         "Here's your revised version:",
+        "revised version:",
+        "improved version:",
         "Here’s your revised version:",
         "(Note:",
         "Source text:",

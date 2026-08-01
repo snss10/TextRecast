@@ -39,6 +39,24 @@ public sealed class ModelQualificationCorpusTests
     }
 
     [TestMethod]
+    public void EnglishCorpusCoversCurrentQualificationScope()
+    {
+        var cases = ModelQualificationCorpus.English;
+
+        Assert.IsNotEmpty(cases);
+        Assert.IsTrue(cases.All(testCase => testCase.Language == "en"));
+        CollectionAssert.AreEquivalent(
+            Enum.GetValues<FormatOperation>(),
+            cases.Select(testCase => testCase.Request.Operation).Distinct().ToArray());
+        CollectionAssert.AreEquivalent(
+            Enum.GetValues<ToneStyle>(),
+            cases.Where(testCase => testCase.Request.Tone is not null)
+                .Select(testCase => testCase.Request.Tone!.Value)
+                .Distinct()
+                .ToArray());
+    }
+
+    [TestMethod]
     public void EvaluatorScoresCleanConstrainedOutputAtTen()
     {
         var testCase = new ModelQualificationCase(
@@ -149,7 +167,7 @@ public sealed class ModelQualificationCorpusTests
 
         var result = ModelQualificationEvaluator.Evaluate(
             testCase,
-            "Here’s your revised version: Friendly text.",
+            "Here is the revised version: Friendly text.",
             TimeSpan.FromSeconds(1));
 
         Assert.IsFalse(result.ProtocolSafe);

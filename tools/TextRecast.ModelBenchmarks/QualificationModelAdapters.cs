@@ -30,25 +30,26 @@ internal abstract class QualificationModelAdapterBase : ISlmModelAdapter
 
     public abstract string BuildPrompt(FormatTextRequest request);
 
+    protected virtual string? ModelInstruction => null;
+
+    protected string SystemInstruction =>
+        SlmPromptBuilder.BuildSystemInstruction(ModelInstruction);
+
     public virtual ISamplingPipeline CreateSamplingPipeline() => new GreedySamplingPipeline();
 
-    public int GetExpectedOutputWordCount(FormatTextRequest request)
+    public int GetOutputWordCapacity(FormatTextRequest request)
     {
-        var inputWords = Qwen25ModelAdapter.CountWords(request.Text);
-        return request.Operation switch
-        {
-            FormatOperation.Shorten => Qwen25ModelAdapter.GetShorterWordTarget(inputWords),
-            FormatOperation.Lengthen => Qwen25ModelAdapter.GetLongerWordTarget(inputWords),
-            FormatOperation.Summarize => Qwen25ModelAdapter.GetSummaryWordTarget(inputWords),
-            _ => inputWords
-        };
+        var inputWords = SlmPromptBuilder.CountWords(request.Text);
+        return request.Operation == FormatOperation.Lengthen
+            ? SlmPromptBuilder.GetExpandedWordCapacity(inputWords)
+            : inputWords;
     }
 
     public abstract string CleanOutput(string output);
 
     protected static string BuildUserContent(FormatTextRequest request, string escapedSource)
     {
-        return $"Task: {Qwen25ModelAdapter.BuildTask(request)}\n\nSource text:\n{escapedSource}";
+        return SlmPromptBuilder.BuildUserContent(request, escapedSource);
     }
 
     protected static string RemoveTokens(string output, params string[] tokens)
@@ -82,11 +83,13 @@ internal sealed class Qwen35QualificationAdapter : QualificationModelAdapterBase
 
     public override IReadOnlyList<string> StopSequences => Stops;
 
+    protected override string ModelInstruction => "Do not explain or show reasoning.";
+
     public override string BuildPrompt(FormatTextRequest request)
     {
         var source = EscapeTokens(request.Text, "<|im_start|>", "<|im_end|>");
         var user = BuildUserContent(request, source);
-        return $"<|im_start|>system\n{Qwen25ModelAdapter.SystemInstruction}<|im_end|>\n" +
+        return $"<|im_start|>system\n{SystemInstruction}<|im_end|>\n" +
                $"<|im_start|>user\n{user}<|im_end|>\n" +
                "<|im_start|>assistant\n<think>\n\n</think>\n\n";
     }
@@ -153,7 +156,7 @@ internal sealed class Phi4MiniQualificationAdapter : QualificationModelAdapterBa
             "<|assistant|>",
             "<|end|>");
         var user = BuildUserContent(request, source);
-        return $"<|system|>{Qwen25ModelAdapter.SystemInstruction}<|end|>" +
+        return $"<|system|>{SystemInstruction}<|end|>" +
                $"<|user|>{user}<|end|><|assistant|>";
     }
 
@@ -187,7 +190,7 @@ internal sealed class Ministral3QualificationAdapter : QualificationModelAdapter
             "[INST]",
             "[/INST]");
         var user = BuildUserContent(request, source);
-        return $"<s>[SYSTEM_PROMPT]{Qwen25ModelAdapter.SystemInstruction}[/SYSTEM_PROMPT]" +
+        return $"<s>[SYSTEM_PROMPT]{SystemInstruction}[/SYSTEM_PROMPT]" +
                $"[INST]{user}[/INST]";
     }
 
@@ -213,7 +216,7 @@ internal sealed class Granite41QualificationAdapter : QualificationModelAdapterB
             "<|end_of_text|>");
         var user = BuildUserContent(request, source);
         return "<|start_of_role|>system<|end_of_role|>" +
-               $"{Qwen25ModelAdapter.SystemInstruction}<|end_of_text|>\n" +
+               $"{SystemInstruction}<|end_of_text|>\n" +
                "<|start_of_role|>user<|end_of_role|>" +
                $"{user}<|end_of_text|>\n" +
                "<|start_of_role|>assistant<|end_of_role|>";
