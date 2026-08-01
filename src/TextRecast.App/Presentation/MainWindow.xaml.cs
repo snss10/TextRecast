@@ -3,6 +3,7 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using TextRecast.Core.Application;
 using TextRecast.Core.Models;
+using TextRecast.Infrastructure.SLM;
 using TextRecast.Infrastructure.Windows.Native;
 
 namespace TextRecast.App.Presentation;
@@ -10,6 +11,7 @@ namespace TextRecast.App.Presentation;
 public partial class MainWindow : Window
 {
     private readonly FormatTextWorkflow _formatTextWorkflow;
+    private readonly SlmModelProfile _activeModelProfile;
     private ResultWindow? _resultWindow;
     private IntPtr _windowHandle;
     private Point? _dragStartScreen;
@@ -18,10 +20,15 @@ public partial class MainWindow : Window
     private bool _didDrag;
     private int _captureInProgress;
 
-    internal MainWindow(FormatTextWorkflow formatTextWorkflow)
+    internal MainWindow(
+        FormatTextWorkflow formatTextWorkflow,
+        SlmModelProfile activeModelProfile)
     {
         InitializeComponent();
-        _formatTextWorkflow = formatTextWorkflow;
+        _formatTextWorkflow = formatTextWorkflow ??
+            throw new ArgumentNullException(nameof(formatTextWorkflow));
+        _activeModelProfile = activeModelProfile ??
+            throw new ArgumentNullException(nameof(activeModelProfile));
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -176,5 +183,23 @@ public partial class MainWindow : Window
     private void Quit_Click(object sender, RoutedEventArgs e)
     {
         global::System.Windows.Application.Current.Shutdown();
+    }
+
+    private void ModelInformation_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show(
+            this,
+            $"{_activeModelProfile.DisplayName}\n\n" +
+            $"Role: {_activeModelProfile.Role}\n" +
+            $"Language: {_activeModelProfile.LanguageSupport}\n" +
+            $"License: {_activeModelProfile.LicenseExpression}\n" +
+            $"Source: {_activeModelProfile.SourceRepository}\n\n" +
+            $"{_activeModelProfile.LimitationNotice}\n\n" +
+            "Always review the replaced text in the source application.",
+            "Current TextRecast model",
+            MessageBoxButton.OK,
+            _activeModelProfile.IsExperimental
+                ? MessageBoxImage.Warning
+                : MessageBoxImage.Information);
     }
 }

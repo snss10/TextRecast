@@ -1,4 +1,3 @@
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("TextRecast.Infrastructure.Tests")]
-[assembly: InternalsVisibleTo("TextRecast.ModelBenchmarks")]

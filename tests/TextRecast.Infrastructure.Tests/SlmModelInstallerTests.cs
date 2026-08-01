@@ -560,11 +560,22 @@ public sealed class SlmModelInstallerTests
         return new SlmModelProfile
         {
             Id = "test-model",
+            DisplayName = "Test model",
+            Role = SlmModelRole.Fast,
+            Description = "Installer test model.",
+            LanguageSupport = "English",
+            LimitationNotice = "Test limitation.",
+            IsExperimental = false,
             AdapterId = Qwen25ModelAdapter.AdapterId,
+            PromptProfileId = "test-prompt-v1",
+            SamplingProfileId = "greedy-v1",
             FileName = "test-model.gguf",
             DownloadUri = new Uri("https://models.example.test/test-model.gguf"),
             ExpectedSha256 = Convert.ToHexStringLower(SHA256.HashData(modelBytes)),
-            ExpectedFileSize = modelBytes.LongLength
+            ExpectedFileSize = modelBytes.LongLength,
+            SourceRepository = "example/test-model",
+            SourceRevision = "test-revision",
+            LicenseExpression = "Apache-2.0"
         };
     }
 

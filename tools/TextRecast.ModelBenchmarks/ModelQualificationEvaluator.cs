@@ -3,11 +3,24 @@ using System.Text.RegularExpressions;
 namespace TextRecast.ModelBenchmarks;
 
 public sealed record ModelQualificationResult(
+    int Iteration,
     string CaseId,
     string Category,
+    ModelQualificationSplit Split,
     string Language,
+    string Operation,
+    string? Tone,
+    string SourceText,
+    IReadOnlyList<string> RiskTags,
+    IReadOnlyList<string> SemanticRequirements,
+    ModelQualificationLengthIntent LengthIntent,
     string Output,
     double DurationMilliseconds,
+    double FirstTokenMilliseconds,
+    int OutputTokens,
+    double GenerationTokensPerSecond,
+    double EndToEndTokensPerSecond,
+    int InputWords,
     int OutputWords,
     bool OutputPresent,
     bool ProtocolSafe,
@@ -16,19 +29,32 @@ public sealed record ModelQualificationResult(
     int RequiredTermsMatched,
     int RequiredTermsTotal,
     bool ForbiddenTermsAbsent,
-    bool LengthWithinBounds,
+    bool LengthIntentSatisfied,
     double QualityScore,
     string? Error);
 
 public static partial class ModelQualificationEvaluator
 {
+    public const string Version = "semantic-v2-2026-08-01";
+
     private static readonly string[] ProtocolMarkers =
     [
         "<|im_start|>",
         "<|im_end|>",
         "<|assistant|>",
+        "<|system|>",
+        "<|user|>",
+        "<|start_of_role|>",
+        "<|end_of_role|>",
+        "[SYSTEM_PROMPT]",
+        "[INST]",
         "<think>",
         "</think>",
+        "Here's your revised version:",
+        "Here’s your revised version:",
+        "revised version:",
+        "improved version:",
+        "(Note:",
         "Source text:",
         "Task:"
     ];
@@ -36,10 +62,14 @@ public static partial class ModelQualificationEvaluator
     public static ModelQualificationResult Evaluate(
         ModelQualificationCase testCase,
         string output,
-        TimeSpan duration)
+        TimeSpan duration,
+        TimeSpan? firstTokenLatency = null,
+        int outputTokens = 0,
+        int iteration = 1)
     {
         var normalizedOutput = output.Trim();
         var outputPresent = normalizedOutput.Length > 0;
+        var inputWords = WordRegex().Count(testCase.Request.Text);
         var outputWords = WordRegex().Count(normalizedOutput);
         var protocolSafe = ProtocolMarkers.All(
             marker => !normalizedOutput.Contains(marker, StringComparison.OrdinalIgnoreCase));
@@ -51,11 +81,10 @@ public static partial class ModelQualificationEvaluator
             term => normalizedOutput.Contains(term, StringComparison.OrdinalIgnoreCase));
         var forbiddenTermsAbsent = testCase.Expectation.ForbiddenTerms.All(
             term => !normalizedOutput.Contains(term, StringComparison.OrdinalIgnoreCase));
-        var lengthWithinBounds =
-            (testCase.Expectation.MinimumWords is null ||
-             outputWords >= testCase.Expectation.MinimumWords.Value) &&
-            (testCase.Expectation.MaximumWords is null ||
-             outputWords <= testCase.Expectation.MaximumWords.Value);
+        var lengthIntentSatisfied = outputPresent && SatisfiesLengthIntent(
+            testCase.Expectation.LengthIntent,
+            inputWords,
+            outputWords);
 
         var requiredRatio = testCase.Expectation.RequiredTerms.Count == 0
             ? 1D
@@ -67,14 +96,38 @@ public static partial class ModelQualificationEvaluator
             (languagePreserved ? 1D : 0D) +
             (requiredRatio * 2D) +
             (forbiddenTermsAbsent ? 1D : 0D) +
-            (lengthWithinBounds ? 1D : 0D);
+            (lengthIntentSatisfied ? 1D : 0D);
+        var firstToken = firstTokenLatency ?? TimeSpan.Zero;
+        var generationSeconds = Math.Max(
+            0,
+            (duration - firstToken).TotalSeconds);
+        var generatedAfterFirstToken = Math.Max(0, outputTokens - 1);
+        var generationTokensPerSecond = generationSeconds > 0
+            ? generatedAfterFirstToken / generationSeconds
+            : 0;
+        var endToEndTokensPerSecond = duration.TotalSeconds > 0
+            ? outputTokens / duration.TotalSeconds
+            : 0;
 
         return new ModelQualificationResult(
+            iteration,
             testCase.Id,
             testCase.Category,
+            testCase.Split,
             testCase.Language,
+            testCase.Request.Operation.ToString(),
+            testCase.Request.Tone?.ToString(),
+            testCase.Request.Text,
+            testCase.RiskTags,
+            testCase.Expectation.SemanticRequirements,
+            testCase.Expectation.LengthIntent,
             normalizedOutput,
-            duration.TotalMilliseconds,
+            Math.Round(duration.TotalMilliseconds, 2),
+            Math.Round(firstToken.TotalMilliseconds, 2),
+            outputTokens,
+            Math.Round(generationTokensPerSecond, 2),
+            Math.Round(endToEndTokensPerSecond, 2),
+            inputWords,
             outputWords,
             outputPresent,
             protocolSafe,
@@ -83,7 +136,7 @@ public static partial class ModelQualificationEvaluator
             requiredTermsMatched,
             testCase.Expectation.RequiredTerms.Count,
             forbiddenTermsAbsent,
-            lengthWithinBounds,
+            lengthIntentSatisfied,
             Math.Round(qualityScore, 2),
             null);
     }
@@ -91,14 +144,28 @@ public static partial class ModelQualificationEvaluator
     public static ModelQualificationResult Failure(
         ModelQualificationCase testCase,
         Exception exception,
-        TimeSpan duration)
+        TimeSpan duration,
+        int iteration = 1)
     {
         return new ModelQualificationResult(
+            iteration,
             testCase.Id,
             testCase.Category,
+            testCase.Split,
             testCase.Language,
+            testCase.Request.Operation.ToString(),
+            testCase.Request.Tone?.ToString(),
+            testCase.Request.Text,
+            testCase.RiskTags,
+            testCase.Expectation.SemanticRequirements,
+            testCase.Expectation.LengthIntent,
             string.Empty,
-            duration.TotalMilliseconds,
+            Math.Round(duration.TotalMilliseconds, 2),
+            0,
+            0,
+            0,
+            0,
+            WordRegex().Count(testCase.Request.Text),
             0,
             false,
             true,
@@ -110,6 +177,21 @@ public static partial class ModelQualificationEvaluator
             false,
             0,
             exception.Message);
+    }
+
+    private static bool SatisfiesLengthIntent(
+        ModelQualificationLengthIntent intent,
+        int inputWords,
+        int outputWords)
+    {
+        return intent switch
+        {
+            ModelQualificationLengthIntent.Unconstrained => true,
+            ModelQualificationLengthIntent.MoreConcise => outputWords < inputWords,
+            ModelQualificationLengthIntent.MoreExplicit => outputWords > inputWords,
+            ModelQualificationLengthIntent.Summarized => outputWords < inputWords,
+            _ => throw new ArgumentOutOfRangeException(nameof(intent))
+        };
     }
 
     private static bool HasRepeatedPhrase(string output)

@@ -29,8 +29,8 @@ public static class SlmModelRecommender
 
         var selected = assessments
             .Where(assessment => assessment.IsEligible)
-            .OrderByDescending(assessment => assessment.Profile.Requirements!.QualityScore)
-            .ThenByDescending(assessment => assessment.Profile.Requirements!.Tier)
+            .OrderByDescending(assessment => assessment.Profile.Requirements!.Tier)
+            .ThenByDescending(assessment => assessment.Profile.Requirements!.QualityScore)
             .ThenByDescending(assessment => assessment.Profile.Requirements!.MeasuredTokensPerSecond)
             .ThenBy(assessment => assessment.Profile.ExpectedFileSize)
             .FirstOrDefault();
@@ -46,7 +46,7 @@ public static class SlmModelRecommender
         var requirements = selected.Profile.Requirements!;
         var recommendationReason = string.Create(
             CultureInfo.InvariantCulture,
-            $"{selected.Profile.Id} is the highest-quality safe model (quality {requirements.QualityScore:F1}/10, {requirements.Tier} tier).");
+            $"{selected.Profile.Id} is the highest compatible {requirements.Tier} tier option (measured quality {requirements.QualityScore:F1}/10).");
 
         return new SlmModelRecommendation(selected.Profile, recommendationReason, assessments);
     }

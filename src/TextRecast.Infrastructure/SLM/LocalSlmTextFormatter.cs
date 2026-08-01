@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
@@ -12,8 +13,6 @@ namespace TextRecast.Infrastructure.SLM;
 public sealed class LocalSlmTextFormatter : ITextFormatter
 {
     private const int ContextSafetyMarginTokens = 32;
-    private const int MaxFinalSummaryCharacters = 6000;
-    private const int MaxChunkCharacters = 450;
     private const int MinimumOutputTokens = 64;
     private readonly SlmModelOptions _options;
     private readonly ISlmModelAdapter _adapter;
@@ -36,6 +35,61 @@ public sealed class LocalSlmTextFormatter : ITextFormatter
 
     public async Task<string> FormatAsync(FormatTextRequest request, CancellationToken cancellationToken)
     {
+        return await FormatCoreAsync(request, null, cancellationToken);
+    }
+
+    internal async Task LoadModelAsync(CancellationToken cancellationToken)
+    {
+        ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposeState) != 0, this);
+        using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+            cancellationToken,
+            _shutdownCancellation.Token);
+        await _inferenceGate.WaitAsync(linkedCancellation.Token);
+
+        try
+        {
+            ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposeState) != 0, this);
+            await EnsureModelLoadedAsync(linkedCancellation.Token);
+        }
+        finally
+        {
+            _inferenceGate.Release();
+        }
+    }
+
+    internal async Task<SlmFormattingMeasurement> FormatMeasuredAsync(
+        FormatTextRequest request,
+        CancellationToken cancellationToken)
+    {
+        var startedAt = Stopwatch.GetTimestamp();
+        var stopwatch = Stopwatch.StartNew();
+        long firstTokenTimestamp = -1;
+        var output = await FormatCoreAsync(
+            request,
+            () => Interlocked.CompareExchange(
+                ref firstTokenTimestamp,
+                Stopwatch.GetTimestamp(),
+                -1),
+            cancellationToken);
+        stopwatch.Stop();
+
+        if (firstTokenTimestamp < 0)
+        {
+            throw new TextFormattingException("The local model returned no measurable output tokens.");
+        }
+
+        var firstToken = Stopwatch.GetElapsedTime(
+            startedAt,
+            firstTokenTimestamp);
+        var outputTokens = _weights!.Tokenize(output, false, false, Encoding.UTF8).Length;
+        return new SlmFormattingMeasurement(output, firstToken, stopwatch.Elapsed, outputTokens);
+    }
+
+    private async Task<string> FormatCoreAsync(
+        FormatTextRequest request,
+        Action? firstTokenObserved,
+        CancellationToken cancellationToken)
+    {
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposeState) != 0, this);
         if (!request.Text.Any(char.IsLetterOrDigit))
         {
@@ -51,12 +105,17 @@ public sealed class LocalSlmTextFormatter : ITextFormatter
         {
             ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposeState) != 0, this);
             await EnsureModelLoadedAsync(linkedCancellation.Token);
-            var output = request.Operation == FormatOperation.Summarize &&
-                         request.Text.Length > MaxFinalSummaryCharacters
-                ? await FormatHierarchicalSummaryAsync(request, linkedCancellation.Token)
-                : ShouldFormatInChunks(request)
-                    ? await FormatInChunksAsync(request, linkedCancellation.Token)
-                    : await FormatSingleAsync(request, linkedCancellation.Token);
+            var output = CanFormatSingle(request)
+                ? await FormatSingleAsync(request, firstTokenObserved, linkedCancellation.Token)
+                : request.Operation == FormatOperation.Summarize
+                    ? await FormatHierarchicalSummaryAsync(
+                        request,
+                        firstTokenObserved,
+                        linkedCancellation.Token)
+                    : await FormatInChunksAsync(
+                        request,
+                        firstTokenObserved,
+                        linkedCancellation.Token);
             EnsureOutputPresent(output);
             return output;
         }
@@ -68,15 +127,19 @@ public sealed class LocalSlmTextFormatter : ITextFormatter
 
     private async Task<string> FormatInChunksAsync(
         FormatTextRequest request,
+        Action? firstTokenObserved,
         CancellationToken cancellationToken)
     {
-        var chunks = TextChunker.Split(request.Text, MaxChunkCharacters);
+        var chunks = SplitToFit(request);
         var output = new StringBuilder(request.Text.Length);
         foreach (var chunk in chunks)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var chunkRequest = request with { Text = chunk.Text };
-            var formattedChunk = await FormatSingleAsync(chunkRequest, cancellationToken);
+            var formattedChunk = await FormatSingleAsync(
+                chunkRequest,
+                firstTokenObserved,
+                cancellationToken);
             output.Append(formattedChunk.Trim());
             output.Append(chunk.Separator);
         }
@@ -86,10 +149,11 @@ public sealed class LocalSlmTextFormatter : ITextFormatter
 
     private async Task<string> FormatHierarchicalSummaryAsync(
         FormatTextRequest request,
+        Action? firstTokenObserved,
         CancellationToken cancellationToken)
     {
         var currentText = request.Text;
-        for (var level = 0; currentText.Length > MaxFinalSummaryCharacters; level++)
+        for (var level = 0; !CanFormatSingle(request with { Text = currentText }); level++)
         {
             if (level >= 8)
             {
@@ -98,11 +162,14 @@ public sealed class LocalSlmTextFormatter : ITextFormatter
             }
 
             var levelOutput = new StringBuilder(currentText.Length / 2);
-            foreach (var chunk in TextChunker.Split(currentText, MaxChunkCharacters))
+            foreach (var chunk in SplitToFit(request with { Text = currentText }))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var chunkRequest = request with { Text = chunk.Text };
-                var summary = await FormatSingleAsync(chunkRequest, cancellationToken);
+                var summary = await FormatSingleAsync(
+                    chunkRequest,
+                    firstTokenObserved,
+                    cancellationToken);
                 levelOutput.Append(summary.Trim());
                 levelOutput.Append(' ');
             }
@@ -117,23 +184,43 @@ public sealed class LocalSlmTextFormatter : ITextFormatter
             currentText = reducedText;
         }
 
-        return await FormatSingleAsync(request with { Text = currentText }, cancellationToken);
+        return await FormatSingleAsync(
+            request with { Text = currentText },
+            firstTokenObserved,
+            cancellationToken);
     }
 
     private async Task<string> FormatSingleAsync(
         FormatTextRequest request,
+        Action? firstTokenObserved,
         CancellationToken cancellationToken)
     {
         var prompt = _adapter.BuildPrompt(request);
         return await Task.Run(
-            () => InferAsync(request, prompt, cancellationToken),
+            () => InferAsync(request, prompt, firstTokenObserved, cancellationToken),
             cancellationToken);
     }
 
-    private static bool ShouldFormatInChunks(FormatTextRequest request)
+    private IReadOnlyList<TextChunker.Chunk> SplitToFit(FormatTextRequest request)
     {
-        return request.Text.Length > MaxChunkCharacters &&
-               request.Operation != FormatOperation.Summarize;
+        var maximumCharacters = Math.Max(64, request.Text.Length - 1);
+        while (true)
+        {
+            var chunks = TextChunker.Split(request.Text, maximumCharacters);
+            if (chunks.Count > 1 && chunks.All(chunk =>
+                    CanFormatSingle(request with { Text = chunk.Text })))
+            {
+                return chunks;
+            }
+
+            if (maximumCharacters == 64)
+            {
+                throw new TextFormattingException(
+                    "This selection exceeds the local model's context capacity. Try a smaller section.");
+            }
+
+            maximumCharacters = Math.Max(64, maximumCharacters * 3 / 4);
+        }
     }
 
     public void Dispose()
@@ -156,6 +243,7 @@ public sealed class LocalSlmTextFormatter : ITextFormatter
     private async Task<string> InferAsync(
         FormatTextRequest request,
         string prompt,
+        Action? firstTokenObserved,
         CancellationToken cancellationToken)
     {
         var inferenceParams = new InferenceParams
@@ -171,6 +259,11 @@ public sealed class LocalSlmTextFormatter : ITextFormatter
                            inferenceParams,
                            cancellationToken))
         {
+            if (token.Length > 0)
+            {
+                firstTokenObserved?.Invoke();
+            }
+
             output.Append(token);
         }
 
@@ -187,12 +280,46 @@ public sealed class LocalSlmTextFormatter : ITextFormatter
                 "This selection exceeds the local model's context capacity. Try a smaller section.");
         }
 
-        var expectedOutputWords = _adapter.GetExpectedOutputWordCount(request);
-        var desiredTokens = Math.Clamp(
-            (int)Math.Ceiling(expectedOutputWords * 1.9) + 48,
-            MinimumOutputTokens,
+        var desiredTokens = Math.Min(
+            GetEstimatedOutputTokens(request),
             _options.Profile.MaxOutputTokens);
         return Math.Min(desiredTokens, availableTokens);
+    }
+
+    private bool CanFormatSingle(FormatTextRequest request)
+    {
+        var prompt = _adapter.BuildPrompt(request);
+        var promptTokens = _weights!.Tokenize(prompt, true, true, Encoding.UTF8).Length;
+        return CanFitSingleRequest(
+            promptTokens,
+            GetEstimatedOutputTokens(request),
+            checked((int)_options.Profile.ContextSize),
+            _options.Profile.MaxOutputTokens,
+            request.Operation is FormatOperation.Shorten or FormatOperation.Summarize);
+    }
+
+    internal static bool CanFitSingleRequest(
+        int promptTokens,
+        int estimatedOutputTokens,
+        int contextTokens,
+        int maximumOutputTokens,
+        bool outputMayBeCapped = false)
+    {
+        if (!outputMayBeCapped && estimatedOutputTokens > maximumOutputTokens)
+        {
+            return false;
+        }
+
+        var reservedOutputTokens = Math.Min(estimatedOutputTokens, maximumOutputTokens);
+        return (long)promptTokens + ContextSafetyMarginTokens + reservedOutputTokens <= contextTokens;
+    }
+
+    private int GetEstimatedOutputTokens(FormatTextRequest request)
+    {
+        var outputWordCapacity = _adapter.GetOutputWordCapacity(request);
+        return Math.Max(
+            MinimumOutputTokens,
+            checked((int)Math.Ceiling(outputWordCapacity * 1.9) + 48));
     }
 
     private static void EnsureOutputPresent(string output)
@@ -264,3 +391,9 @@ public sealed class LocalSlmTextFormatter : ITextFormatter
     }
 
 }
+
+internal sealed record SlmFormattingMeasurement(
+    string Output,
+    TimeSpan FirstTokenLatency,
+    TimeSpan TotalLatency,
+    int OutputTokens);

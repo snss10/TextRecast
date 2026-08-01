@@ -45,4 +45,39 @@
           Link="THIRD-PARTY-NOTICES.md"
           CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
+
+  <Target Name="IncludeRuntimeLegalNotices"
+          AfterTargets="ComputeFilesToPublish"
+          Condition="'$(SelfContained)' == 'true'">
+    <ItemGroup>
+      <_NetCoreRuntimePack Include="@(ResolvedRuntimePack)"
+                           Condition="'%(FrameworkName)' == 'Microsoft.NETCore.App'" />
+      <_WindowsDesktopRuntimePack Include="@(ResolvedRuntimePack)"
+                                  Condition="'%(FrameworkName)' == 'Microsoft.WindowsDesktop.App'" />
+    </ItemGroup>
+
+    <Error Condition="'@(_NetCoreRuntimePack)' == ''"
+           Text="The self-contained .NET runtime pack could not be resolved for legal notice packaging." />
+    <Error Condition="'@(_WindowsDesktopRuntimePack)' == ''"
+           Text="The self-contained Windows Desktop runtime pack could not be resolved for legal notice packaging." />
+
+    <ItemGroup>
+      <ResolvedFileToPublish Include="@(_NetCoreRuntimePack->'%(PackageDirectory)\LICENSE.TXT')"
+                             RelativePath="DOTNET-LICENSE.txt"
+                             CopyToPublishDirectory="PreserveNewest" />
+      <ResolvedFileToPublish Include="@(_NetCoreRuntimePack->'%(PackageDirectory)\THIRD-PARTY-NOTICES.TXT')"
+                             RelativePath="DOTNET-THIRD-PARTY-NOTICES.txt"
+                             CopyToPublishDirectory="PreserveNewest" />
+      <ResolvedFileToPublish Include="@(_WindowsDesktopRuntimePack->'%(PackageDirectory)\LICENSE')"
+                             RelativePath="WPF-LICENSE.txt"
+                             CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+
+    <Error Condition="!Exists('%(_NetCoreRuntimePack.PackageDirectory)\LICENSE.TXT')"
+           Text="The .NET runtime pack license file is missing." />
+    <Error Condition="!Exists('%(_NetCoreRuntimePack.PackageDirectory)\THIRD-PARTY-NOTICES.TXT')"
+           Text="The .NET runtime pack third-party notice file is missing." />
+    <Error Condition="!Exists('%(_WindowsDesktopRuntimePack.PackageDirectory)\LICENSE')"
+           Text="The Windows Desktop runtime pack license file is missing." />
+  </Target>
 </Project>
