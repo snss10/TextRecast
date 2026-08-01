@@ -88,7 +88,10 @@ jobs:
             "TextRecast.exe",
             "LICENSE",
             "NOTICE",
-            "THIRD-PARTY-NOTICES.md"
+            "THIRD-PARTY-NOTICES.md",
+            "DOTNET-LICENSE.txt",
+            "DOTNET-THIRD-PARTY-NOTICES.txt",
+            "WPF-LICENSE.txt"
           )
           foreach ($file in $requiredFiles) {
             if (-not (Test-Path -LiteralPath (Join-Path $publishDirectory $file) -PathType Leaf)) {

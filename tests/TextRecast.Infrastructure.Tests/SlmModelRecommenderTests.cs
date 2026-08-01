@@ -82,6 +82,32 @@ public sealed class SlmModelRecommenderTests
     }
 
     [TestMethod]
+    public void RecommendPrefersHigherTierWhenEligibleScoresAreClose()
+    {
+        var balanced = CreateProfile(
+            "balanced-close-score",
+            SlmModelTier.Balanced,
+            qualityScore: 9.8,
+            peakWorkingSetBytes: 2 * Gibibyte,
+            measuredTokensPerSecond: 12,
+            expectedFileSize: 2 * Gibibyte);
+        var quality = CreateProfile(
+            "quality-close-score",
+            SlmModelTier.Quality,
+            qualityScore: 9.7,
+            peakWorkingSetBytes: 3 * Gibibyte,
+            measuredTokensPerSecond: 8,
+            expectedFileSize: 3 * Gibibyte);
+
+        var result = SlmModelRecommender.Recommend(
+            CreateHardware(availableMemory: 8 * Gibibyte, availableStorage: 8 * Gibibyte),
+            [balanced, quality]);
+
+        Assert.AreSame(quality, result.RecommendedProfile);
+        StringAssert.Contains(result.Reason, "Quality tier");
+    }
+
+    [TestMethod]
     public void AssessRejectsLowTemporaryMemoryAndInsufficientStorage()
     {
         var lowMemory = SlmModelRecommender.Assess(
@@ -155,6 +181,20 @@ public sealed class SlmModelRecommenderTests
     }
 
     [TestMethod]
+    public void GraniteAlternativeIsEligibleOnlyWhenMeasuredRequirementsFit()
+    {
+        var eligible = SlmModelRecommender.Assess(
+            CreateHardware(availableMemory: 6 * Gibibyte, availableStorage: 4 * Gibibyte),
+            SlmModelCatalog.Granite41Alternative);
+        var lowMemory = SlmModelRecommender.Assess(
+            CreateHardware(availableMemory: 3 * Gibibyte, availableStorage: 4 * Gibibyte),
+            SlmModelCatalog.Granite41Alternative);
+
+        Assert.IsTrue(eligible.IsEligible);
+        Assert.IsFalse(lowMemory.IsEligible);
+    }
+
+    [TestMethod]
     public void RequiredAvailableMemoryIncludesThirtyPercentAndFixedReserve()
     {
         var required = SlmModelRecommender.CalculateRequiredAvailableMemory(2 * Gibibyte);
@@ -198,11 +238,22 @@ public sealed class SlmModelRecommenderTests
         long expectedFileSize = 600 * Mebibyte) => new()
         {
             Id = id,
+            DisplayName = id,
+            Role = SlmModelRole.Fast,
+            Description = "Test model.",
+            LanguageSupport = "English",
+            LimitationNotice = "Test limitation.",
+            IsExperimental = false,
             AdapterId = Qwen25ModelAdapter.AdapterId,
+            PromptProfileId = "test-prompt-v1",
+            SamplingProfileId = "greedy-v1",
             FileName = id + ".gguf",
             DownloadUri = new Uri("https://example.com/" + id + ".gguf"),
             ExpectedSha256 = new string('0', 64),
             ExpectedFileSize = expectedFileSize,
+            SourceRepository = "example/test",
+            SourceRevision = "test-revision",
+            LicenseExpression = "Apache-2.0",
             Requirements = requirements
         };
 }

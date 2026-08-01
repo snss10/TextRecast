@@ -24,7 +24,7 @@
 
 TextRecast is a lightweight Windows desktop utility that rewrites text inside the applications you already use. Select editable text, click the floating TextRecast button, choose an operation, and apply the result back to the original selection.
 
-Inference runs locally through LLamaSharp's CPU backend. The default model is Qwen2.5-1.5B-Instruct, and the SLM layer is designed so additional local models can be added later.
+Inference runs locally through LLamaSharp's CPU backend. On first setup, TextRecast presents four cataloged models and downloads only the option the user explicitly confirms. Qwen 2.5 1.5B remains the fast default; the other choices are clearly labeled experimental.
 
 ## Features
 
@@ -34,6 +34,7 @@ Inference runs locally through LLamaSharp's CPU backend. The default model is Qw
 - Change tone to Professional, Casual, Friendly, Formal, or Direct
 - Work in browsers, editors, messaging apps, and other Windows applications
 - Run formatting locally without an account or API key
+- Choose a compatible local model before any download begins
 - Resume an interrupted model download instead of starting over
 - Cancel an active generation and retry a failed replacement
 - Revalidate the source window and selected text before replacing anything
@@ -42,16 +43,16 @@ Inference runs locally through LLamaSharp's CPU backend. The default model is Qw
 
 ### Requirements
 
-- Windows 10 or Windows 11 on x64 hardware
+- Windows 11 on x64 hardware, or a [Windows 10 edition still supported by .NET 10](https://github.com/dotnet/core/blob/main/release-notes/10.0/supported-os.md)
 - The current [Microsoft Visual C++ v14 Redistributable](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170) for x64
-- Approximately 1.5 GB of available disk space
+- Approximately 2-4 GB of available disk space, depending on the selected model
 - An internet connection when no valid packaged or previously installed model is available
 
 The published Windows x64 application is self-contained. Users running that build do **not** need to install .NET 10.
 
 ### Run a published build
 
-1. Download `TextRecast-v0.1.1-win-x64.zip` from the [Releases page](https://github.com/snss10/TextRecast/releases).
+1. Download the latest `TextRecast-vX.Y.Z-win-x64.zip` from the [Releases page](https://github.com/snss10/TextRecast/releases).
 2. Optionally verify it with the accompanying `.zip.sha256` file.
 3. Extract the entire archive to a folder.
 4. Run `TextRecast.exe`.
@@ -60,9 +61,18 @@ Keep every file from the archive together; the application depends on the includ
 
 ## First launch and model download
 
-When no valid packaged or previously installed model is available, TextRecast downloads the 1.1 GB Qwen model on first launch. The setup window shows transferred size, speed, estimated time remaining, verification, and installation status.
+TextRecast shows the available models before making a network request. Each choice includes its role, download size, hardware compatibility, language support, and known limitations. The exact model and size are shown again for confirmation; only that model is downloaded.
 
-Cancelling or losing the connection keeps a validated partial download. Select **Retry** on the same computer to continue from the saved point. TextRecast restarts safely if the server no longer accepts the saved range or the remote file has changed. A model becomes active only after its exact size and SHA-256 checksum pass verification.
+| Role | Model | Download | Status |
+| --- | --- | ---: | --- |
+| Fast/default | Qwen 2.5 1.5B Q4_K_M | 1.04 GiB | Established default; review all output |
+| Balanced | Qwen 3.5 2B Q5_K_M | 1.34 GiB | Experimental; summaries need extra review |
+| Best quality | Qwen 3.5 4B Q5_K_M | 2.93 GiB | Experimental; verify roles, titles, and deadlines |
+| Alternative | Granite 4.1 3B Q5_K_M | 2.27 GiB | Experimental; higher semantic-drift risk |
+
+These profiles are currently supported for English rewriting only. None is perfect, so review the replaced text in the source application after every operation. Hardware recommendations are guidance; Qwen 2.5 remains selectable when hardware inspection is unavailable.
+
+Cancelling or losing the connection keeps a validated partial download. Select **Retry** on the same computer to continue from the saved point. TextRecast restarts safely if the server no longer accepts the saved range or the remote file has changed. A model becomes active only after its exact size and SHA-256 checksum pass verification. A valid installed selection is reused on later launches.
 
 The first formatting request loads the model into memory. Later requests reuse the loaded model and usually start faster.
 
@@ -77,7 +87,7 @@ TextRecast stores the model for the current Windows user under:
 
 `%LOCALAPPDATA%` is a standard Windows environment variable. It expands automatically to the signed-in user's local application-data folder; it is not a path tied to the developer's computer.
 
-For the exact filename, checksum, upstream source, and offline setup instructions, see [Models/README.md](Models/README.md).
+For exact filenames, checksums, pinned upstream revisions, and offline setup instructions, see [Models/README.md](Models/README.md).
 </details>
 
 <details>
@@ -102,7 +112,7 @@ There are no author-specific absolute paths in this README.
 
 TextRecast returns focus to the source application, confirms that the original selection is still valid, and then replaces it. If replacement cannot be completed safely, the original text remains unchanged and the generated result remains available for **Retry replace**.
 
-Drag the floating icon to reposition it. Right-click the icon and choose **Quit TextRecast** to close the application.
+Drag the floating icon to reposition it. Right-click it to view the active model and its limitations, or choose **Quit TextRecast** to close the application.
 
 ## Privacy and safeguards
 
@@ -116,7 +126,7 @@ Drag the floating icon to reposition it. Right-click the icon and choose **Quit 
 
 Capture fallback and replacement temporarily use the Windows clipboard. Windows clipboard history, clipboard sync, or third-party clipboard managers may retain that content, so disable those features when working with sensitive text.
 
-Network access is used to obtain the model only when a valid model is not already packaged or installed. After that download, normal formatting does not require a cloud service.
+Network access begins only after the user confirms a model that is not already packaged or installed. After that download, normal formatting does not require a cloud service.
 
 ## How it works
 
@@ -154,7 +164,7 @@ Install the latest x64 package from Microsoft's [supported Visual C++ Redistribu
 <details>
 <summary><strong>The model download or integrity check failed</strong></summary>
 
-Check the internet connection and available disk space, then retry. TextRecast keeps a safe partial download after cancellation or a temporary network failure and resumes it automatically. Invalid partial data is discarded instead of being installed. Offline setup details and the expected checksum are in [Models/README.md](Models/README.md).
+Check the internet connection and available disk space, then retry. TextRecast keeps a safe partial download after cancellation or a temporary network failure and resumes it automatically. Invalid partial data is discarded instead of being installed. Offline setup details and expected checksums are in [Models/README.md](Models/README.md).
 </details>
 
 <details>
@@ -192,9 +202,9 @@ dotnet run --project src/TextRecast.App/TextRecast.App.csproj
 dotnet publish src/TextRecast.App/TextRecast.App.csproj -c Release -r win-x64 --self-contained true -o artifacts/TextRecast-win-x64
 ```
 
-Distribute the complete output folder, not only the executable. The exact cataloged GGUF file documented in [Models/README.md](Models/README.md) is packaged when it is placed in the repository's `Models` directory before publishing; otherwise TextRecast downloads the model for the current user on first launch.
+Distribute the complete output folder, not only the executable. Any cataloged GGUF files documented in [Models/README.md](Models/README.md) are packaged when placed in the repository's `Models` directory before publishing. Normal release packages intentionally contain no model; the user chooses and confirms one during setup.
 
-For tagged releases, GitHub Actions creates a model-free `TextRecast-vX.Y.Z-win-x64.zip` containing the complete runtime and legal notices, plus a matching SHA-256 file. A release tag must use `vMAJOR.MINOR.PATCH` and match the version in `Directory.Build.props`.
+For tagged releases, GitHub Actions creates a model-free `TextRecast-vX.Y.Z-win-x64.zip` containing the complete runtime, TextRecast legal files, and the legal files supplied with the bundled .NET runtime packs, plus a matching SHA-256 file. A release tag must use `vMAJOR.MINOR.PATCH` and match the version in `Directory.Build.props`.
 
 ## Project layout
 
@@ -202,7 +212,7 @@ For tagged releases, GitHub Actions creates a model-free `TextRecast-vX.Y.Z-win-
 - [TextRecast.Core](src/TextRecast.Core/) contains platform-independent workflows, contracts, results, and models.
 - [TextRecast.Infrastructure](src/TextRecast.Infrastructure/) contains local SLM inference and Windows integrations.
 - [tests](tests/) contains Core and Infrastructure automated tests.
-- [Models](Models/) documents the default model and offline packaging.
+- [Models](Models/) documents supported models, integrity metadata, and offline packaging.
 
 ```text
 TextRecast.App ---------> TextRecast.Core
@@ -218,7 +228,7 @@ Model profiles are defined in [SlmModelCatalog.cs](src/TextRecast.Infrastructure
 
 - WPF on .NET 10
 - [LLamaSharp](https://github.com/SciSharp/LLamaSharp) with CPU inference
-- [Qwen2.5-1.5B-Instruct-GGUF](https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF)
+- [Qwen 2.5 GGUF](https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF), [Qwen 3.5 GGUF](https://huggingface.co/unsloth/Qwen3.5-2B-GGUF), and [Granite 4.1 GGUF](https://huggingface.co/ibm-granite/granite-4.1-3b-GGUF)
 - Windows UI Automation, clipboard, and input APIs
 
 ## Security and license

@@ -140,11 +140,13 @@
                Source="/Assets/Brand/textrecast-icon.png"
                RenderOptions.BitmapScalingMode="HighQuality" />
         <StackPanel VerticalAlignment="Center">
-          <TextBlock FontSize="22"
+          <TextBlock x:Name="HeaderTextBlock"
+                     FontSize="22"
                      FontWeight="SemiBold"
                      Foreground="{StaticResource InkBrush}"
                      Text="Preparing TextRecast" />
-          <TextBlock Margin="0,4,0,0"
+          <TextBlock x:Name="SetupSubtitleTextBlock"
+                     Margin="0,4,0,0"
                      Foreground="{StaticResource SecondaryTextBrush}"
                      Text="One-time private model setup" />
         </StackPanel>
@@ -162,7 +164,8 @@
           <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <TextBlock Foreground="#303641"
+        <TextBlock x:Name="IntroductionTextBlock"
+                   Foreground="#303641"
                    TextWrapping="Wrap"
                    LineHeight="21"
                    Text="TextRecast needs a 1.1 GB local language model. It stays on this computer and is used privately for formatting." />

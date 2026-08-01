@@ -29,4 +29,40 @@ public sealed class TextChunkerTests
             !char.IsLowSurrogate(chunk.Text[0])));
         Assert.AreEqual(input, string.Concat(chunks.Select(chunk => chunk.Text)));
     }
+
+    [TestMethod]
+    public void ContextPlannerKeepsACompletePassageTogetherWhenItFits()
+    {
+        Assert.IsTrue(LocalSlmTextFormatter.CanFitSingleRequest(
+            promptTokens: 700,
+            estimatedOutputTokens: 700,
+            contextTokens: 4096,
+            maximumOutputTokens: 768));
+    }
+
+    [TestMethod]
+    public void ContextPlannerChunksWhenOutputOrCombinedContextCannotFit()
+    {
+        Assert.IsFalse(LocalSlmTextFormatter.CanFitSingleRequest(
+            promptTokens: 700,
+            estimatedOutputTokens: 769,
+            contextTokens: 4096,
+            maximumOutputTokens: 768));
+        Assert.IsFalse(LocalSlmTextFormatter.CanFitSingleRequest(
+            promptTokens: 3400,
+            estimatedOutputTokens: 700,
+            contextTokens: 4096,
+            maximumOutputTokens: 768));
+    }
+
+    [TestMethod]
+    public void ContextPlannerKeepsCompressionTogetherWhenOutputUsesTheSafetyCeiling()
+    {
+        Assert.IsTrue(LocalSlmTextFormatter.CanFitSingleRequest(
+            promptTokens: 2000,
+            estimatedOutputTokens: 1000,
+            contextTokens: 4096,
+            maximumOutputTokens: 768,
+            outputMayBeCapped: true));
+    }
 }
