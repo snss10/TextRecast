@@ -22,7 +22,7 @@ public sealed class QualificationModelAdapterTests
     ];
 
     [TestMethod]
-    public void CatalogProvidesFourVersionedProfilesForEveryExactModel()
+    public void CatalogProvidesVersionedProfilesForEveryExactModel()
     {
         Assert.HasCount(6, QualificationPromptCatalog.Models);
         Assert.AreEqual(
@@ -32,12 +32,28 @@ public sealed class QualificationModelAdapterTests
         var profileIds = new List<string>();
         foreach (var model in QualificationPromptCatalog.Models)
         {
-            Assert.HasCount(4, model.PromptProfiles);
+            var expectedProfileCount = model.Id switch
+            {
+                "ministral-3-3b-instruct-2512" => 5,
+                "qwen3.5-2b" or "qwen3.5-4b" => 7,
+                _ => 6
+            };
+            Assert.HasCount(expectedProfileCount, model.PromptProfiles);
             Assert.HasCount(1, model.PromptProfiles.Where(profile => profile.IsBaseline));
             Assert.IsTrue(model.PromptProfiles.All(profile => profile.CandidateModelId == model.Id));
             Assert.IsTrue(model.PromptProfiles.All(profile => profile.AdapterId == model.AdapterId));
-            Assert.IsTrue(model.PromptProfiles.All(profile => profile.Version == "1"));
-            Assert.IsTrue(model.PromptProfiles.All(profile => profile.Id.EndsWith("-v1", StringComparison.Ordinal)));
+            Assert.HasCount(4, model.PromptProfiles.Where(profile => profile.Version == "1"));
+            Assert.HasCount(1, model.PromptProfiles.Where(profile => profile.Version == "2"));
+            Assert.HasCount(1, model.PromptProfiles.Where(
+                profile => profile.Id.EndsWith("-tuned-v2", StringComparison.Ordinal)));
+            Assert.HasCount(
+                model.Id == "ministral-3-3b-instruct-2512" ? 0 : 1,
+                model.PromptProfiles.Where(
+                    profile => profile.Id.EndsWith("-balanced-v3", StringComparison.Ordinal)));
+            Assert.HasCount(
+                model.Id is "qwen3.5-2b" or "qwen3.5-4b" ? 1 : 0,
+                model.PromptProfiles.Where(
+                    profile => profile.Id.EndsWith("-final-v4", StringComparison.Ordinal)));
             Assert.IsTrue(model.PromptProfiles.All(profile => Regex.IsMatch(
                 profile.Fingerprint,
                 "^[a-f0-9]{64}$",
@@ -46,6 +62,67 @@ public sealed class QualificationModelAdapterTests
         }
 
         Assert.AreEqual(profileIds.Count, profileIds.Distinct(StringComparer.Ordinal).Count());
+    }
+
+    [TestMethod]
+    public void TunedProfilesAreDistinctAndModelBound()
+    {
+        var tunedProfiles = QualificationPromptCatalog.Models
+            .Select(model => model.PromptProfiles.Single(profile => profile.Version == "2"))
+            .ToArray();
+
+        Assert.AreEqual(
+            tunedProfiles.Length,
+            tunedProfiles.Select(profile => profile.SystemInstruction).Distinct().Count());
+        Assert.AreEqual(
+            tunedProfiles.Length,
+            tunedProfiles.Select(profile => profile.TaskWording).Distinct().Count());
+
+        foreach (var model in QualificationPromptCatalog.Models)
+        {
+            var baseline = model.PromptProfiles.Single(profile => profile.IsBaseline);
+            var tuned = model.PromptProfiles.Single(profile => profile.Version == "2");
+
+            Assert.AreNotEqual(baseline.SystemInstruction, tuned.SystemInstruction, model.Id);
+            Assert.AreNotEqual(baseline.TaskWording, tuned.TaskWording, model.Id);
+            Assert.AreEqual(QualificationSourceLayout.Labeled, tuned.SourceLayout, model.Id);
+        }
+    }
+
+    [TestMethod]
+    public void BalancedProfilesAreDistinctAndExcludeRejectedMinistralCandidate()
+    {
+        var balancedProfiles = QualificationPromptCatalog.Models
+            .SelectMany(model => model.PromptProfiles.Where(profile => profile.Version == "3"))
+            .ToArray();
+
+        Assert.HasCount(5, balancedProfiles);
+        Assert.AreEqual(
+            balancedProfiles.Length,
+            balancedProfiles.Select(profile => profile.SystemInstruction).Distinct().Count());
+        Assert.AreEqual(
+            balancedProfiles.Length,
+            balancedProfiles.Select(profile => profile.TaskWording).Distinct().Count());
+        Assert.IsFalse(balancedProfiles.Any(
+            profile => profile.CandidateModelId == "ministral-3-3b-instruct-2512"));
+    }
+
+    [TestMethod]
+    public void FinalProfilesAreDistinctAndLimitedToQwen35Candidates()
+    {
+        var finalProfiles = QualificationPromptCatalog.Models
+            .SelectMany(model => model.PromptProfiles.Where(profile => profile.Version == "4"))
+            .ToArray();
+
+        Assert.HasCount(2, finalProfiles);
+        Assert.AreEqual(
+            finalProfiles.Length,
+            finalProfiles.Select(profile => profile.SystemInstruction).Distinct().Count());
+        Assert.AreEqual(
+            finalProfiles.Length,
+            finalProfiles.Select(profile => profile.TaskWording).Distinct().Count());
+        Assert.IsTrue(finalProfiles.All(
+            profile => profile.CandidateModelId is "qwen3.5-2b" or "qwen3.5-4b"));
     }
 
     [TestMethod]
