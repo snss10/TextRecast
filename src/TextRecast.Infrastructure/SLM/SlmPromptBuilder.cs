@@ -16,7 +16,14 @@ internal static class SlmPromptBuilder
 
     internal static string BuildUserContent(FormatTextRequest request, string sourceText)
     {
-        return $"Task: {BuildTask(request)}\n\nSource text:\n{sourceText}";
+        return BuildUserContent(BuildTask(request), sourceText);
+    }
+
+    internal static string BuildUserContent(string task, string sourceText)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(task);
+        ArgumentNullException.ThrowIfNull(sourceText);
+        return $"Task: {task}\n\nSource text:\n{sourceText}";
     }
 
     internal static string BuildTask(FormatTextRequest request)
@@ -47,6 +54,26 @@ internal static class SlmPromptBuilder
         ? Math.Max(wordCount + 3, (int)Math.Ceiling(wordCount * 1.5))
         : Math.Max(wordCount + 5, (int)Math.Ceiling(wordCount * 1.4));
 
+    internal static string BuildQwen35SmallBalancedTask(FormatTextRequest request)
+    {
+        return request.Operation switch
+        {
+            FormatOperation.Improve =>
+                "Correct spelling, grammar, punctuation, capitalization, and unclear wording while retaining the source's intended claim.",
+            FormatOperation.Shorten =>
+                "Rewrite more concisely by combining clauses and removing redundancy. Retain actors, reasons, recurrence, outcome, impact, conditions, and deadlines.",
+            FormatOperation.Lengthen =>
+                "Rewrite fragments as complete natural prose and make stated relationships explicit. Preserve unresolved references and introduce no new fact.",
+            FormatOperation.Summarize =>
+                "Produce a shorter connected account of the essential actors, cause, action, outcome, impact, and next step.",
+            FormatOperation.ChangeTone when request.Tone is ToneStyle tone =>
+                $"Rewrite with a clearly {GetToneDescription(tone)} style. Preserve responsibility, modality, urgency, facts, conditions, and deadlines.",
+            FormatOperation.ChangeTone =>
+                throw new ArgumentException("A tone is required for Change tone.", nameof(request)),
+            _ => throw new ArgumentOutOfRangeException(nameof(request))
+        };
+    }
+
     private static string BuildToneTask(ToneStyle tone)
     {
         return tone switch
@@ -61,6 +88,19 @@ internal static class SlmPromptBuilder
                 "Rewrite in formal, precise, respectful language while preserving the original intent and context.",
             ToneStyle.Direct =>
                 "Rewrite in clear, direct language that leads with the main action or point while retaining necessary context.",
+            _ => throw new ArgumentOutOfRangeException(nameof(tone))
+        };
+    }
+
+    private static string GetToneDescription(ToneStyle tone)
+    {
+        return tone switch
+        {
+            ToneStyle.Professional => "calm, neutral, and professional",
+            ToneStyle.Casual => "natural and conversational",
+            ToneStyle.Friendly => "warm and considerate",
+            ToneStyle.Formal => "formal, precise, and respectful",
+            ToneStyle.Direct => "clear and direct",
             _ => throw new ArgumentOutOfRangeException(nameof(tone))
         };
     }

@@ -198,11 +198,22 @@ public sealed class SlmModelRecommenderTests
         long expectedFileSize = 600 * Mebibyte) => new()
         {
             Id = id,
+            DisplayName = id,
+            Role = SlmModelRole.Fast,
+            Description = "Test model.",
+            LanguageSupport = "English",
+            LimitationNotice = "Test limitation.",
+            IsExperimental = false,
             AdapterId = Qwen25ModelAdapter.AdapterId,
+            PromptProfileId = "test-prompt-v1",
+            SamplingProfileId = "greedy-v1",
             FileName = id + ".gguf",
             DownloadUri = new Uri("https://example.com/" + id + ".gguf"),
             ExpectedSha256 = new string('0', 64),
             ExpectedFileSize = expectedFileSize,
+            SourceRepository = "example/test",
+            SourceRevision = "test-revision",
+            LicenseExpression = "Apache-2.0",
             Requirements = requirements
         };
 }

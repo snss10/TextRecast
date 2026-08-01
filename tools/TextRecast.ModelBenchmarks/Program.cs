@@ -72,11 +72,22 @@ internal static class Program
         var profile = new SlmModelProfile
         {
             Id = options.ModelId,
+            DisplayName = options.ModelId,
+            Role = SlmModelRole.Balanced,
+            Description = "Local qualification benchmark model.",
+            LanguageSupport = "Benchmark corpus language",
+            LimitationNotice = "Benchmark-only profile; not available in the application catalog.",
+            IsExperimental = true,
             AdapterId = options.AdapterId,
+            PromptProfileId = options.PromptProfileId,
+            SamplingProfileId = adapter.SamplingProfileId,
             FileName = fileInfo.Name,
             DownloadUri = new Uri("https://localhost/model-benchmark"),
             ExpectedSha256 = options.ExpectedSha256,
             ExpectedFileSize = options.ExpectedFileSize,
+            SourceRepository = options.SourceRepository,
+            SourceRevision = options.SourceRevision,
+            LicenseExpression = options.SourceLicense,
             ContextSize = options.ContextSize,
             MaxOutputTokens = options.MaxOutputTokens
         };
