@@ -10,6 +10,7 @@ namespace TextRecast.ModelBenchmarks;
 
 internal static class Program
 {
+    private const string RunnerVersion = "model-benchmark-runner-v2-2026-08-01";
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
@@ -21,8 +22,8 @@ internal static class Program
         try
         {
             var options = BenchmarkOptions.Parse(args);
+            var outputPath = options.GetValidatedOutputPath();
             var run = await RunAsync(options);
-            var outputPath = Path.GetFullPath(options.OutputPath);
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
             await File.WriteAllTextAsync(
                 outputPath,
@@ -47,6 +48,13 @@ internal static class Program
 
     private static async Task<ModelBenchmarkRun> RunAsync(BenchmarkOptions options)
     {
+        var promptProfile = QualificationPromptCatalog.ResolveProfile(
+            options.ModelId,
+            options.AdapterId,
+            options.PromptProfileId);
+        var adapter = QualificationModelAdapters.Resolve(
+            options.AdapterId,
+            promptProfile);
         var modelPath = Path.GetFullPath(options.ModelPath);
         if (!File.Exists(modelPath))
         {
@@ -71,7 +79,6 @@ internal static class Program
             ContextSize = options.ContextSize,
             MaxOutputTokens = options.MaxOutputTokens
         };
-        var adapter = QualificationModelAdapters.Resolve(options.AdapterId);
         var hardware = new HardwareInspector().Inspect(fileInfo.DirectoryName!);
         var process = Process.GetCurrentProcess();
         process.Refresh();
@@ -151,8 +158,32 @@ internal static class Program
                 ModelQualificationCorpus.Version,
                 ModelQualificationCorpus.EnglishFingerprint,
                 ModelQualificationEvaluator.Version,
+                RunnerVersion,
                 options.CorpusScope,
                 corpus.Count),
+            new BenchmarkPromptEvidence(
+                QualificationPromptCatalog.Version,
+                promptProfile.CandidateModelId,
+                promptProfile.Id,
+                promptProfile.Version,
+                promptProfile.Fingerprint,
+                promptProfile.BuildEffectiveFingerprint(
+                    adapter.EffectiveSystemInstruction,
+                    adapter.ChatTemplateId),
+                promptProfile.Description,
+                promptProfile.IsBaseline,
+                adapter.EffectiveSystemInstruction,
+                promptProfile.TaskWording.ToString(),
+                promptProfile.SourceLayout.ToString(),
+                adapter.Id,
+                adapter.ChatTemplateId,
+                adapter.SamplingProfileId,
+                adapter.SamplingPipelineId,
+                adapter.SamplingSeed,
+                adapter.SamplingTemperature,
+                adapter.SamplingTopP,
+                adapter.SamplingTopK,
+                adapter.StopSequences),
             new BenchmarkEnvironment(
                 Environment.OSVersion.ToString(),
                 RuntimeInformation.FrameworkDescription,
@@ -199,6 +230,7 @@ public sealed record ModelBenchmarkRun(
     DateTimeOffset FinishedAtUtc,
     ModelSourceEvidence Source,
     BenchmarkCorpusEvidence Corpus,
+    BenchmarkPromptEvidence Prompt,
     BenchmarkEnvironment Environment,
     string ModelId,
     string AdapterId,
@@ -223,8 +255,31 @@ public sealed record BenchmarkCorpusEvidence(
     string Version,
     string Fingerprint,
     string EvaluatorVersion,
+    string RunnerVersion,
     ModelQualificationCorpusScope Scope,
     int CaseCount);
+
+public sealed record BenchmarkPromptEvidence(
+    string CatalogVersion,
+    string CandidateModelId,
+    string ProfileId,
+    string ProfileVersion,
+    string ProfileFingerprint,
+    string EffectivePromptFingerprint,
+    string Description,
+    bool IsBaseline,
+    string EffectiveSystemInstruction,
+    string TaskWording,
+    string SourceLayout,
+    string AdapterId,
+    string ChatTemplateId,
+    string SamplingProfileId,
+    string SamplingPipelineId,
+    uint? SamplingSeed,
+    float? SamplingTemperature,
+    float? SamplingTopP,
+    int? SamplingTopK,
+    IReadOnlyList<string> StopSequences);
 
 public sealed record BenchmarkEnvironment(
     string OperatingSystem,
@@ -397,10 +452,12 @@ internal sealed record BenchmarkOptions(
     int MaxOutputTokens,
     int ThreadCount,
     int Iterations,
-    ModelQualificationCorpusScope CorpusScope)
+    ModelQualificationCorpusScope CorpusScope,
+    string PromptProfileId)
 {
     public const string Usage =
         "Usage: --model <local.gguf> --model-id <id> --adapter <adapter-id> " +
+        "--prompt-profile <versioned-profile-id> " +
         "--output <results.json> --source-repo <owner/repo> --source-revision <commit> " +
         "--source-license <SPDX> --quantization <Q5_K_M> --expected-sha <sha256> " +
         "--expected-size <bytes> [--context 4096] [--max-output 768] " +
@@ -428,7 +485,7 @@ internal sealed record BenchmarkOptions(
             "--model", "--model-id", "--adapter", "--output", "--source-repo",
             "--source-revision", "--source-license", "--quantization", "--expected-sha",
             "--expected-size", "--context", "--max-output", "--threads", "--iterations",
-            "--corpus-scope"
+            "--corpus-scope", "--prompt-profile"
         };
         var unknown = values.Keys.FirstOrDefault(key => !allowed.Contains(key));
         if (unknown is not null)
@@ -458,7 +515,8 @@ internal sealed record BenchmarkOptions(
                 1,
                 64),
             ParseNumber(values, "--iterations", 3, 1, 10),
-            ParseCorpusScope(values));
+            ParseCorpusScope(values),
+            GetRequired(values, "--prompt-profile"));
     }
 
     private static ModelQualificationCorpusScope ParseCorpusScope(
@@ -477,6 +535,20 @@ internal sealed record BenchmarkOptions(
             _ => throw new ArgumentException(
                 "Argument --corpus-scope must be prompt-development, prompt-validation, or final-qualification.")
         };
+    }
+
+    public string GetValidatedOutputPath()
+    {
+        var modelPath = Path.GetFullPath(ModelPath);
+        var outputPath = Path.GetFullPath(OutputPath);
+        if (modelPath.Equals(outputPath, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException(
+                "The benchmark output path cannot overwrite the model file.",
+                nameof(OutputPath));
+        }
+
+        return outputPath;
     }
 
     private static void ValidateSha256(string value)

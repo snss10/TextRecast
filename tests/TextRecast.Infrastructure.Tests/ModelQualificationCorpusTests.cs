@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using TextRecast.Core.Formatting;
+using TextRecast.Infrastructure.SLM;
 using TextRecast.ModelBenchmarks;
 
 namespace TextRecast.Infrastructure.Tests;
@@ -175,6 +176,27 @@ public sealed class ModelQualificationCorpusTests
         Assert.AreEqual(ModelQualificationCorpusScope.FinalQualification, options.CorpusScope);
         Assert.IsTrue(ModelQualificationCorpus.GetCases(options.CorpusScope)
             .Any(testCase => testCase.Split == ModelQualificationSplit.Holdout));
+    }
+
+    [TestMethod]
+    public void BenchmarkCommandRequiresVersionedPromptProfile()
+    {
+        var arguments = CreateBenchmarkArguments().ToList();
+        var promptIndex = arguments.IndexOf("--prompt-profile");
+        arguments.RemoveRange(promptIndex, 2);
+
+        Assert.ThrowsExactly<ArgumentException>(() => BenchmarkOptions.Parse(arguments));
+    }
+
+    [TestMethod]
+    public void BenchmarkCommandCannotOverwriteTheModelWithResultJson()
+    {
+        var arguments = CreateBenchmarkArguments().ToList();
+        var outputIndex = arguments.IndexOf("--output") + 1;
+        arguments[outputIndex] = "model.gguf";
+        var options = BenchmarkOptions.Parse(arguments);
+
+        Assert.ThrowsExactly<ArgumentException>(() => options.GetValidatedOutputPath());
     }
 
     [TestMethod]
@@ -425,8 +447,9 @@ public sealed class ModelQualificationCorpusTests
         return
         [
             "--model", "model.gguf",
-            "--model-id", "test-model",
-            "--adapter", "test-adapter",
+            "--model-id", "Qwen2.5-1.5B-Instruct-Q5_K_M",
+            "--adapter", Qwen25ModelAdapter.AdapterId,
+            "--prompt-profile", "qwen25-1.5b-shared-v1",
             "--output", "result.json",
             "--source-repo", "owner/repository",
             "--source-revision", "0123456789abcdef",

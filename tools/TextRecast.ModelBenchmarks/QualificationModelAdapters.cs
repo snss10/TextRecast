@@ -6,15 +6,24 @@ namespace TextRecast.ModelBenchmarks;
 
 internal static class QualificationModelAdapters
 {
-    public static ISlmModelAdapter Resolve(string adapterId)
+    public static QualificationModelAdapterBase Resolve(
+        string adapterId,
+        QualificationPromptProfile promptProfile)
     {
+        if (!promptProfile.AdapterId.Equals(adapterId, StringComparison.Ordinal))
+        {
+            throw new ArgumentException(
+                $"Prompt profile '{promptProfile.Id}' requires adapter '{promptProfile.AdapterId}'.",
+                nameof(adapterId));
+        }
+
         return adapterId switch
         {
-            Qwen25ModelAdapter.AdapterId => new Qwen25ModelAdapter(),
-            Qwen35QualificationAdapter.AdapterId => new Qwen35QualificationAdapter(),
-            Phi4MiniQualificationAdapter.AdapterId => new Phi4MiniQualificationAdapter(),
-            Ministral3QualificationAdapter.AdapterId => new Ministral3QualificationAdapter(),
-            Granite41QualificationAdapter.AdapterId => new Granite41QualificationAdapter(),
+            Qwen25ModelAdapter.AdapterId => new Qwen25QualificationAdapter(promptProfile),
+            Qwen35QualificationAdapter.AdapterId => new Qwen35QualificationAdapter(promptProfile),
+            Phi4MiniQualificationAdapter.AdapterId => new Phi4MiniQualificationAdapter(promptProfile),
+            Ministral3QualificationAdapter.AdapterId => new Ministral3QualificationAdapter(promptProfile),
+            Granite41QualificationAdapter.AdapterId => new Granite41QualificationAdapter(promptProfile),
             _ => throw new ArgumentException(
                 $"Unknown qualification adapter '{adapterId}'.",
                 nameof(adapterId))
@@ -24,7 +33,28 @@ internal static class QualificationModelAdapters
 
 internal abstract class QualificationModelAdapterBase : ISlmModelAdapter
 {
+    protected QualificationModelAdapterBase(QualificationPromptProfile promptProfile)
+    {
+        PromptProfile = promptProfile;
+    }
+
     public abstract string Id { get; }
+
+    public QualificationPromptProfile PromptProfile { get; }
+
+    public abstract string ChatTemplateId { get; }
+
+    public abstract string SamplingProfileId { get; }
+
+    public virtual string SamplingPipelineId => nameof(GreedySamplingPipeline);
+
+    public virtual uint? SamplingSeed => null;
+
+    public virtual float? SamplingTemperature => null;
+
+    public virtual float? SamplingTopP => null;
+
+    public virtual int? SamplingTopK => null;
 
     public abstract IReadOnlyList<string> StopSequences { get; }
 
@@ -32,8 +62,8 @@ internal abstract class QualificationModelAdapterBase : ISlmModelAdapter
 
     protected virtual string? ModelInstruction => null;
 
-    protected string SystemInstruction =>
-        SlmPromptBuilder.BuildSystemInstruction(ModelInstruction);
+    public string EffectiveSystemInstruction =>
+        PromptProfile.BuildSystemInstruction(ModelInstruction);
 
     public virtual ISamplingPipeline CreateSamplingPipeline() => new GreedySamplingPipeline();
 
@@ -47,9 +77,9 @@ internal abstract class QualificationModelAdapterBase : ISlmModelAdapter
 
     public abstract string CleanOutput(string output);
 
-    protected static string BuildUserContent(FormatTextRequest request, string escapedSource)
+    protected string BuildUserContent(FormatTextRequest request, string escapedSource)
     {
-        return SlmPromptBuilder.BuildUserContent(request, escapedSource);
+        return PromptProfile.BuildUserContent(request, escapedSource);
     }
 
     protected static string RemoveTokens(string output, params string[] tokens)
@@ -73,13 +103,56 @@ internal abstract class QualificationModelAdapterBase : ISlmModelAdapter
     }
 }
 
-internal sealed class Qwen35QualificationAdapter : QualificationModelAdapterBase
+internal sealed class Qwen25QualificationAdapter(QualificationPromptProfile promptProfile)
+    : QualificationModelAdapterBase(promptProfile)
+{
+    private static readonly IReadOnlyList<string> Stops =
+        Array.AsReadOnly(["<|im_end|>", "<|im_start|>"]);
+
+    public override string Id => Qwen25ModelAdapter.AdapterId;
+
+    public override string ChatTemplateId => "qwen-chatml-v1";
+
+    public override string SamplingProfileId => "greedy-v1";
+
+    public override IReadOnlyList<string> StopSequences => Stops;
+
+    public override string BuildPrompt(FormatTextRequest request)
+    {
+        var source = EscapeTokens(request.Text, "<|im_start|>", "<|im_end|>");
+        var user = BuildUserContent(request, source);
+        return $"<|im_start|>system\n{EffectiveSystemInstruction}<|im_end|>\n" +
+               $"<|im_start|>user\n{user}<|im_end|>\n<|im_start|>assistant\n";
+    }
+
+    public override string CleanOutput(string output)
+    {
+        return RemoveTokens(output, "<|im_end|>", "<|im_start|>");
+    }
+}
+
+internal sealed class Qwen35QualificationAdapter(QualificationPromptProfile promptProfile)
+    : QualificationModelAdapterBase(promptProfile)
 {
     public const string AdapterId = "qwen3.5-chatml";
     private static readonly IReadOnlyList<string> Stops =
         Array.AsReadOnly(["<|im_end|>", "<|im_start|>"]);
 
     public override string Id => AdapterId;
+
+    public override string ChatTemplateId => "qwen3.5-chatml-nonthinking-v1";
+
+    public override string SamplingProfileId => "qwen3.5-default-v1";
+
+    public override string SamplingPipelineId => nameof(DefaultSamplingPipeline);
+
+    public override uint? SamplingSeed => 42;
+
+    public override float? SamplingTemperature => 0.7f;
+
+    public override float? SamplingTopP => 0.8f;
+
+    public override int? SamplingTopK => 20;
 
     public override IReadOnlyList<string> StopSequences => Stops;
 
@@ -89,7 +162,7 @@ internal sealed class Qwen35QualificationAdapter : QualificationModelAdapterBase
     {
         var source = EscapeTokens(request.Text, "<|im_start|>", "<|im_end|>");
         var user = BuildUserContent(request, source);
-        return $"<|im_start|>system\n{SystemInstruction}<|im_end|>\n" +
+        return $"<|im_start|>system\n{EffectiveSystemInstruction}<|im_end|>\n" +
                $"<|im_start|>user\n{user}<|im_end|>\n" +
                "<|im_start|>assistant\n<think>\n\n</think>\n\n";
     }
@@ -98,10 +171,11 @@ internal sealed class Qwen35QualificationAdapter : QualificationModelAdapterBase
     {
         return new DefaultSamplingPipeline
         {
-            Temperature = 0.7f,
-            TopP = 0.8f,
-            TopK = 20,
-            Seed = 42
+            Temperature = SamplingTemperature ?? throw new InvalidOperationException(
+                "The sampling temperature is required."),
+            TopP = SamplingTopP ?? throw new InvalidOperationException("Top P is required."),
+            TopK = SamplingTopK ?? throw new InvalidOperationException("Top K is required."),
+            Seed = SamplingSeed ?? throw new InvalidOperationException("The sampling seed is required.")
         };
     }
 
@@ -137,13 +211,18 @@ internal sealed class Qwen35QualificationAdapter : QualificationModelAdapterBase
     }
 }
 
-internal sealed class Phi4MiniQualificationAdapter : QualificationModelAdapterBase
+internal sealed class Phi4MiniQualificationAdapter(QualificationPromptProfile promptProfile)
+    : QualificationModelAdapterBase(promptProfile)
 {
     public const string AdapterId = "phi4-mini-chat";
     private static readonly IReadOnlyList<string> Stops =
         Array.AsReadOnly(["<|end|>", "<|endoftext|>", "<|system|>", "<|user|>"]);
 
     public override string Id => AdapterId;
+
+    public override string ChatTemplateId => "phi4-chat-v1";
+
+    public override string SamplingProfileId => "greedy-v1";
 
     public override IReadOnlyList<string> StopSequences => Stops;
 
@@ -156,7 +235,7 @@ internal sealed class Phi4MiniQualificationAdapter : QualificationModelAdapterBa
             "<|assistant|>",
             "<|end|>");
         var user = BuildUserContent(request, source);
-        return $"<|system|>{SystemInstruction}<|end|>" +
+        return $"<|system|>{EffectiveSystemInstruction}<|end|>" +
                $"<|user|>{user}<|end|><|assistant|>";
     }
 
@@ -172,12 +251,17 @@ internal sealed class Phi4MiniQualificationAdapter : QualificationModelAdapterBa
     }
 }
 
-internal sealed class Ministral3QualificationAdapter : QualificationModelAdapterBase
+internal sealed class Ministral3QualificationAdapter(QualificationPromptProfile promptProfile)
+    : QualificationModelAdapterBase(promptProfile)
 {
     public const string AdapterId = "ministral3-instruct";
     private static readonly IReadOnlyList<string> Stops = Array.AsReadOnly(["</s>"]);
 
     public override string Id => AdapterId;
+
+    public override string ChatTemplateId => "ministral-system-inst-v1";
+
+    public override string SamplingProfileId => "greedy-v1";
 
     public override IReadOnlyList<string> StopSequences => Stops;
 
@@ -190,20 +274,25 @@ internal sealed class Ministral3QualificationAdapter : QualificationModelAdapter
             "[INST]",
             "[/INST]");
         var user = BuildUserContent(request, source);
-        return $"<s>[SYSTEM_PROMPT]{SystemInstruction}[/SYSTEM_PROMPT]" +
+        return $"<s>[SYSTEM_PROMPT]{EffectiveSystemInstruction}[/SYSTEM_PROMPT]" +
                $"[INST]{user}[/INST]";
     }
 
     public override string CleanOutput(string output) => RemoveTokens(output, "</s>", "<s>");
 }
 
-internal sealed class Granite41QualificationAdapter : QualificationModelAdapterBase
+internal sealed class Granite41QualificationAdapter(QualificationPromptProfile promptProfile)
+    : QualificationModelAdapterBase(promptProfile)
 {
     public const string AdapterId = "granite4.1-chat";
     private static readonly IReadOnlyList<string> Stops =
         Array.AsReadOnly(["<|end_of_text|>", "<|start_of_role|>"]);
 
     public override string Id => AdapterId;
+
+    public override string ChatTemplateId => "granite-role-v1";
+
+    public override string SamplingProfileId => "greedy-v1";
 
     public override IReadOnlyList<string> StopSequences => Stops;
 
@@ -216,7 +305,7 @@ internal sealed class Granite41QualificationAdapter : QualificationModelAdapterB
             "<|end_of_text|>");
         var user = BuildUserContent(request, source);
         return "<|start_of_role|>system<|end_of_role|>" +
-               $"{SystemInstruction}<|end_of_text|>\n" +
+               $"{EffectiveSystemInstruction}<|end_of_text|>\n" +
                "<|start_of_role|>user<|end_of_role|>" +
                $"{user}<|end_of_text|>\n" +
                "<|start_of_role|>assistant<|end_of_role|>";
