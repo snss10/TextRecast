@@ -7,6 +7,7 @@
     <Project Path="src/TextRecast.Setup/TextRecast.Setup.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/TextRecast.App.Tests/TextRecast.App.Tests.csproj" />
     <Project Path="tests/TextRecast.Core.Tests/TextRecast.Core.Tests.csproj" />
     <Project Path="tests/TextRecast.Deployment.Tests/TextRecast.Deployment.Tests.csproj" />
     <Project Path="tests/TextRecast.Infrastructure.Tests/TextRecast.Infrastructure.Tests.csproj" />

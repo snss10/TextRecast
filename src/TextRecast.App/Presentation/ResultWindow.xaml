@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
         Title="TextRecast"
-        Icon="/Assets/Brand/textrecast-icon.png"
+        Icon="/TextRecast;component/Assets/Brand/textrecast-icon.png"
         Width="430"
         Height="336"
         WindowStartupLocation="Manual"
@@ -13,168 +13,6 @@
         Topmost="True"
         Background="Transparent"
         KeyDown="Window_KeyDown">
-    <Window.Resources>
-        <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />
-        <SolidColorBrush x:Key="CanvasBrush" Color="#F6F7F9" />
-        <SolidColorBrush x:Key="InkBrush" Color="#111318" />
-        <SolidColorBrush x:Key="HeaderBrush" Color="#17191E" />
-        <SolidColorBrush x:Key="HeaderHoverBrush" Color="#30333B" />
-        <SolidColorBrush x:Key="FooterBrush" Color="#EEF1F5" />
-        <SolidColorBrush x:Key="PrimaryHoverBrush" Color="#272A31" />
-        <SolidColorBrush x:Key="SecondaryTextBrush" Color="#667085" />
-        <SolidColorBrush x:Key="DividerBrush" Color="#C7CDD6" />
-        <SolidColorBrush x:Key="DisabledSurfaceBrush" Color="#F0F2F5" />
-        <SolidColorBrush x:Key="DisabledTextBrush" Color="#98A2B3" />
-        <SolidColorBrush x:Key="AccentBrush" Color="#30343B" />
-        <SolidColorBrush x:Key="AccentOutlineBrush" Color="#AEB6C2" />
-        <SolidColorBrush x:Key="AccentSoftBrush" Color="#EEF1F5" />
-        <SolidColorBrush x:Key="ReplacingBrush" Color="#0E7490" />
-        <SolidColorBrush x:Key="SuccessBrush" Color="#15803D" />
-        <SolidColorBrush x:Key="WarningBrush" Color="#B45309" />
-        <SolidColorBrush x:Key="ErrorBrush" Color="#B42318" />
-        <DropShadowEffect x:Key="PanelShadow"
-                          BlurRadius="18"
-                          ShadowDepth="5"
-                          Opacity="0.18"
-                          RenderingBias="Performance"
-                          Color="#111318" />
-        <Style x:Key="HeaderButton" TargetType="Button">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Foreground" Value="White" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="HeaderButtonSurface"
-                                Background="{TemplateBinding Background}"
-                                CornerRadius="4">
-                            <ContentPresenter HorizontalAlignment="Center"
-                                              VerticalAlignment="Center" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="HeaderButtonSurface"
-                                        Property="Background"
-                                        Value="{StaticResource HeaderHoverBrush}" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        <Style x:Key="PrimaryButton" TargetType="Button">
-            <Setter Property="Height" Value="26" />
-            <Setter Property="MinWidth" Value="68" />
-            <Setter Property="Padding" Value="12,0" />
-            <Setter Property="Background" Value="{StaticResource InkBrush}" />
-            <Setter Property="Foreground" Value="{StaticResource SurfaceBrush}" />
-            <Setter Property="BorderBrush" Value="{StaticResource InkBrush}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="FontSize" Value="11" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="ButtonBorder"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="5">
-                            <ContentPresenter HorizontalAlignment="Center"
-                                              VerticalAlignment="Center" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ButtonBorder" Property="Background" Value="{StaticResource PrimaryHoverBrush}" />
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="ButtonBorder" Property="Background" Value="{StaticResource DisabledSurfaceBrush}" />
-                                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="{StaticResource DividerBrush}" />
-                                <Setter Property="Foreground" Value="{StaticResource DisabledTextBrush}" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        <Style x:Key="SecondaryButton" TargetType="Button">
-            <Setter Property="Height" Value="26" />
-            <Setter Property="MinWidth" Value="68" />
-            <Setter Property="Padding" Value="12,0" />
-            <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
-            <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}" />
-            <Setter Property="BorderBrush" Value="{StaticResource DividerBrush}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="FontSize" Value="11" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="ButtonBorder"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="4">
-                            <ContentPresenter HorizontalAlignment="Center"
-                                              VerticalAlignment="Center" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ButtonBorder" Property="Background" Value="{StaticResource CanvasBrush}" />
-                                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="{StaticResource SecondaryTextBrush}" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        <Style x:Key="SegmentChoiceButton" TargetType="RadioButton">
-            <Setter Property="Height" Value="32" />
-            <Setter Property="Margin" Value="0" />
-            <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
-            <Setter Property="FontSize" Value="10" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="RadioButton">
-                        <Border x:Name="ChoiceBorder"
-                                Background="{StaticResource SurfaceBrush}"
-                                BorderBrush="{StaticResource DividerBrush}"
-                                BorderThickness="0,0,1,0"
-                                CornerRadius="0">
-                            <ContentPresenter HorizontalAlignment="Center"
-                                              VerticalAlignment="Center" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ChoiceBorder" Property="Background" Value="{StaticResource CanvasBrush}" />
-                                <Setter TargetName="ChoiceBorder" Property="BorderBrush" Value="{StaticResource AccentOutlineBrush}" />
-                            </Trigger>
-                            <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="ChoiceBorder" Property="Background" Value="{StaticResource AccentSoftBrush}" />
-                                <Setter TargetName="ChoiceBorder" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
-                                <Setter TargetName="ChoiceBorder" Property="BorderThickness" Value="1" />
-                                <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
-                                <Setter Property="FontWeight" Value="SemiBold" />
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Cursor" Value="Arrow" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        <Style x:Key="ToneChoiceButton"
-               TargetType="RadioButton"
-               BasedOn="{StaticResource SegmentChoiceButton}">
-            <Setter Property="Height" Value="24" />
-            <Setter Property="FontSize" Value="9.5" />
-        </Style>
-    </Window.Resources>
-
     <Grid>
         <!-- Keep the expensive shadow on a static visual so busy animations do not
              invalidate the entire shadowed content tree on every frame. -->
@@ -208,7 +46,7 @@
                     </Grid.ColumnDefinitions>
                     <Image Width="22"
                            Height="22"
-                           Source="/Assets/Brand/textrecast-mark.png"
+                           Source="/TextRecast;component/Assets/Brand/textrecast-mark.png"
                            Stretch="Uniform"
                            VerticalAlignment="Center"
                            RenderOptions.BitmapScalingMode="HighQuality" />

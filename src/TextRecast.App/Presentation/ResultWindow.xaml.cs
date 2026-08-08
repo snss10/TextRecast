@@ -38,6 +38,7 @@ public partial class ResultWindow : Window
         Func<SelectionContext, string, CancellationToken, Task<TextReplacementResult>> retryReplacementAsync)
     {
         InitializeComponent();
+        ApplicationTheme.Apply(this);
         _applyAsync = applyAsync;
         _retryReplacementAsync = retryReplacementAsync;
         SelectRememberedChoices();

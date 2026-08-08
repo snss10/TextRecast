@@ -10,6 +10,7 @@ public static class WindowsInstallerIdentity
     public const string StartMenuFolderName = "TextRecast";
     public const string StartMenuShortcutName = "TextRecast.lnk";
     public const string ExecutableName = "TextRecast.exe";
+    public const string SetupHostName = "TextRecast.Setup.exe";
     public const string UninstallerName = "Uninstall.exe";
     public const string ApplicationRegistryKey = @"Software\TextRecast";
     public const string UninstallRegistryKey =

@@ -29,6 +29,7 @@ public partial class MainWindow : Window
             throw new ArgumentNullException(nameof(formatTextWorkflow));
         _activeModelProfile = activeModelProfile ??
             throw new ArgumentNullException(nameof(activeModelProfile));
+        ApplicationTheme.Apply(this);
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -187,19 +188,31 @@ public partial class MainWindow : Window
 
     private void ModelInformation_Click(object sender, RoutedEventArgs e)
     {
-        MessageBox.Show(
-            this,
-            $"{_activeModelProfile.DisplayName}\n\n" +
-            $"Role: {_activeModelProfile.Role}\n" +
-            $"Language: {_activeModelProfile.LanguageSupport}\n" +
-            $"License: {_activeModelProfile.LicenseExpression}\n" +
-            $"Source: {_activeModelProfile.SourceRepository}\n\n" +
-            $"{_activeModelProfile.LimitationNotice}\n\n" +
-            "Always review the replaced text in the source application.",
-            "Current TextRecast model",
-            MessageBoxButton.OK,
-            _activeModelProfile.IsExperimental
-                ? MessageBoxImage.Warning
-                : MessageBoxImage.Information);
+        ShowInformationDialog(ApplicationInformation.CreateModel(_activeModelProfile));
+    }
+
+    private void LegalPrivacy_Click(object sender, RoutedEventArgs e)
+    {
+        ShowInformationDialog(ApplicationInformation.CreateLegalAndPrivacy());
+    }
+
+    private void About_Click(object sender, RoutedEventArgs e)
+    {
+        ShowInformationDialog(ApplicationInformation.CreateAbout());
+    }
+
+    private void LauncherMenu_Opened(object sender, RoutedEventArgs e)
+    {
+        ApplicationTheme.Apply(this);
+    }
+
+    private void ShowInformationDialog(InformationDialogContent content)
+    {
+        var dialog = new InformationWindow(content)
+        {
+            Owner = this
+        };
+        dialog.ShowDialog();
+        KeepLauncherOnTop();
     }
 }

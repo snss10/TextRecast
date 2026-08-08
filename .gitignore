@@ -58,3 +58,4 @@ Models/*.partial.metadata.json
 
 # Local documentation drafts and planning notes
 docs/
+/design-qa.md

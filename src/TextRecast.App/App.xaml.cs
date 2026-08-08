@@ -6,7 +6,6 @@ using System.Windows;
 using TextRecast.App.Presentation;
 using TextRecast.Core.Application;
 using TextRecast.Deployment.Setup;
-using TextRecast.Infrastructure.Hardware;
 using TextRecast.Infrastructure.SLM;
 using TextRecast.Infrastructure.Windows.Replacement;
 using TextRecast.Infrastructure.Windows.Selection;
@@ -29,6 +28,7 @@ public partial class App : global::System.Windows.Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        ApplicationTheme.Initialize();
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
         if (e.Args.Contains(VerifyInstallationArgument, StringComparer.OrdinalIgnoreCase))
@@ -108,7 +108,6 @@ public partial class App : global::System.Windows.Application
                     profiles)
                 .LoadOrMigrateWithResultAsync();
             var setupState = migrationResult.State;
-            var candidatePaths = installations.FindModelCandidatesByExpectedSize();
             var activeModelId = setupState.ActiveModel?.ModelId;
             var activeModelPath = migrationResult.VerifiedLegacyModelPath;
             if (activeModelId is not null && activeModelPath is null)
@@ -118,71 +117,29 @@ public partial class App : global::System.Windows.Application
                     .FindVerifiedInstalledModelAsync();
             }
 
-            var choices = CreateModelChoices(profiles, candidatePaths.Keys, userModelDirectory);
-            var selectedChoice = activeModelId is not null && activeModelPath is not null
-                ? choices.FirstOrDefault(choice =>
-                    choice.IsCompatible &&
-                    choice.IsInstalled &&
-                    choice.Profile.Id.Equals(activeModelId, StringComparison.Ordinal))
-                : null;
-
-            SlmModelProfile modelProfile;
-            string modelPath;
-            if (selectedChoice is not null)
+            if (SetupRecoveryLauncher.IsRecoveryRequired(
+                    setupState,
+                    activeModelId,
+                    activeModelPath))
             {
-                modelProfile = selectedChoice.Profile;
-                modelPath = activeModelPath!;
-            }
-            else
-            {
-                var initialModelId = choices.Any(choice =>
-                    choice.IsCompatible &&
-                    choice.Profile.Id.Equals(
-                        setupState.ActiveModel?.ModelId,
-                        StringComparison.Ordinal))
-                    ? setupState.ActiveModel!.ModelId
-                    : SlmModelCatalog.Default.Id;
-                var selectionWindow = new ModelSelectionWindow(choices, initialModelId);
-                if (selectionWindow.ShowDialog() != true || selectionWindow.SelectedProfile is null)
+                if (!SetupRecoveryLauncher.TryLaunch(out var recoveryError))
                 {
-                    Shutdown();
-                    return;
+                    MessageBox.Show(
+                        recoveryError,
+                        "Complete TextRecast setup",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
                 }
 
-                modelProfile = selectionWindow.SelectedProfile;
-                var modelInstaller = installations.GetInstaller(modelProfile.Id);
-                modelPath = modelProfile.Id.Equals(activeModelId, StringComparison.Ordinal)
-                    ? activeModelPath ?? string.Empty
-                    : await modelInstaller.FindVerifiedInstalledModelAsync() ?? string.Empty;
-                if (string.IsNullOrWhiteSpace(modelPath))
-                {
-                    var downloadWindow = new ModelDownloadWindow(modelInstaller, modelProfile);
-                    if (downloadWindow.ShowDialog() != true ||
-                        string.IsNullOrWhiteSpace(downloadWindow.InstalledModelPath))
-                    {
-                        Shutdown();
-                        return;
-                    }
-
-                    modelPath = downloadWindow.InstalledModelPath;
-                }
-
-                setupState = setupState.ActivateVerifiedModel(
-                    modelProfile,
-                    DateTimeOffset.UtcNow);
-                await setupStateStore.SaveAsync(setupState);
-
-                await settingsStore.SaveAsync(new ModelSelectionSettings
-                {
-                    Mode = ModelSelectionMode.Manual,
-                    ActiveModelId = modelProfile.Id
-                });
+                Shutdown();
+                return;
             }
 
-            StartMainWindow(modelProfile, modelPath);
+            StartMainWindow(
+                SlmModelCatalog.GetById(activeModelId!),
+                activeModelPath!);
         }
         catch (Exception exception) when (exception is
-            HardwareInspectionException or
             IOException or
             InvalidDataException or
             UnauthorizedAccessException or
@@ -213,35 +170,6 @@ public partial class App : global::System.Windows.Application
         MainWindow = new MainWindow(workflow, modelProfile);
         MainWindow.Show();
         ShutdownMode = ShutdownMode.OnMainWindowClose;
-    }
-
-    private static ModelSelectionChoice[] CreateModelChoices(
-        IReadOnlyList<SlmModelProfile> profiles,
-        IEnumerable<string> installedModelIds,
-        string userModelDirectory)
-    {
-        var installedIds = new HashSet<string>(installedModelIds, StringComparer.Ordinal);
-        HardwareProfile? hardware = null;
-        try
-        {
-            hardware = new HardwareInspector().Inspect(userModelDirectory);
-        }
-        catch (HardwareInspectionException)
-        {
-        }
-
-        return SlmModelSetupPlanner.CreateChoices(
-                profiles,
-                hardware,
-                installedIds,
-                SlmModelCatalog.Default.Id)
-            .Select(choice => new ModelSelectionChoice(
-                choice.Profile,
-                choice.IsCompatible,
-                choice.IsInstalled,
-                choice.IsRecommended,
-                choice.CompatibilityText))
-            .ToArray();
     }
 
     protected override void OnExit(ExitEventArgs e)

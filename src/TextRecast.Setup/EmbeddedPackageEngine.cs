@@ -113,6 +113,7 @@ internal sealed class EmbeddedPackageEngine : IInstallerPackageEngine
             }
 
             VerifyInstalledPayload(validatedDirectory);
+            PersistRecoveryHost(validatedDirectory);
             return new PackageOperationResult(0, "TextRecast was installed successfully.");
         }
         finally
@@ -422,6 +423,55 @@ internal sealed class EmbeddedPackageEngine : IInstallerPackageEngine
 
     private static string GetApplicationDirectory(string installDirectory) =>
         Path.Combine(installDirectory, ApplicationDirectoryName);
+
+    private static void PersistRecoveryHost(string installDirectory)
+    {
+        var entryAssembly = Assembly.GetEntryAssembly();
+        if (!string.Equals(
+                entryAssembly?.GetName().Name,
+                "TextRecast.Setup",
+                StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var sourcePath = Environment.ProcessPath;
+        if (string.IsNullOrWhiteSpace(sourcePath) || !File.Exists(sourcePath))
+        {
+            throw new InvalidDataException(
+                "The setup recovery host could not be located after installation.");
+        }
+
+        var destinationPath = Path.Combine(
+            installDirectory,
+            WindowsInstallerIdentity.SetupHostName);
+        if (Path.GetFullPath(sourcePath).Equals(
+                Path.GetFullPath(destinationPath),
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var pendingPath = destinationPath + ".pending";
+        try
+        {
+            File.Copy(sourcePath, pendingPath, overwrite: true);
+            File.Move(pendingPath, destinationPath, overwrite: true);
+        }
+        finally
+        {
+            try
+            {
+                File.Delete(pendingPath);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
 
     private static void TryDeleteDirectory(string path)
     {
