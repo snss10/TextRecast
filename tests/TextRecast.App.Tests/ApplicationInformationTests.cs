@@ -6,6 +6,9 @@ namespace TextRecast.App.Tests;
 [TestClass]
 public sealed class ApplicationInformationTests
 {
+    private static readonly string[] LegalPageHeaders =
+        ["Privacy", "License", "Notice", "Third-party notices"];
+
     [TestMethod]
     public void ModelInformationUsesCatalogValues()
     {
@@ -31,5 +34,16 @@ public sealed class ApplicationInformationTests
         Assert.AreEqual("About TextRecast", content.Title);
         StringAssert.Contains(content.Pages.Single().Content, "Version");
         StringAssert.Contains(content.Pages.Single().Content, "Apache License 2.0");
+    }
+
+    [TestMethod]
+    public void LegalInformationIncludesEveryPackagedDocumentPage()
+    {
+        var content = ApplicationInformation.CreateLegalAndPrivacy();
+
+        CollectionAssert.AreEqual(
+            LegalPageHeaders,
+            content.Pages.Select(page => page.Header).ToArray());
+        Assert.IsTrue(content.Pages.All(page => !string.IsNullOrWhiteSpace(page.Content)));
     }
 }

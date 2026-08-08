@@ -86,11 +86,15 @@ internal static class ApplicationTheme
         Set(resources, "PrimaryHoverBrush", dark ? "#60CDFF" : "#005A9E");
         Set(resources, "SecondaryTextBrush", dark ? "#C7C7C7" : "#4A4A4A");
         Set(resources, "DividerBrush", dark ? "#4A4D51" : "#C9C9C9");
+        Set(resources, "ActionBorderBrush", dark ? "#6B6F75" : "#8B8B8B");
         Set(resources, "DisabledSurfaceBrush", dark ? "#24282C" : "#F4F4F4");
         Set(resources, "DisabledTextBrush", dark ? "#85898E" : "#8A8A8A");
         Set(resources, "AccentBrush", dark ? "#60CDFF" : "#0067C0");
         Set(resources, "AccentOutlineBrush", dark ? "#4BA7D1" : "#60A5D8");
         Set(resources, "AccentSoftBrush", dark ? "#173B4D" : "#E5F1FB");
+        Set(resources, "SuccessBrush", dark ? "#4CCB70" : "#15803D");
+        Set(resources, "WarningBrush", dark ? "#F0A04B" : "#B45309");
+        Set(resources, "ErrorBrush", dark ? "#FF6B6B" : "#B42318");
         Set(resources, "MenuHoverBrush", dark ? "#34373C" : "#E8E8E8");
         Set(resources, "MenuIconBrush", dark ? "#E3E3E3" : "#34373B");
         Set(resources, "LauncherBorderBrush", dark ? "#72777F" : "#5E636B");

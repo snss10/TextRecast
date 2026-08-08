@@ -62,8 +62,7 @@ internal sealed class GuidedModelSetupService : IGuidedModelSetupService, IDispo
         var planned = SlmModelSetupPlanner.CreateChoices(
             profiles,
             hardware,
-            candidates.Keys,
-            SlmModelCatalog.Default.Id);
+            candidates.Keys);
         var state = await stateStore.LoadAsync(cancellationToken).ConfigureAwait(false);
         var choices = SetupModelCatalogPresentation.CreateChoices(planned);
         return new SetupPreparation(choices, state.PendingSetup?.ModelId, notice);

@@ -15,32 +15,28 @@ public sealed class SlmModelSetupPlannerTests
         var choices = SlmModelSetupPlanner.CreateChoices(
             SlmModelCatalog.All,
             hardware: null,
-            installedModelIds: [],
-            SlmModelCatalog.Default.Id);
+            installedModelIds: []);
 
         var defaultChoice = choices.Single(choice =>
             choice.Profile.Id.Equals(SlmModelCatalog.Default.Id, StringComparison.Ordinal));
         Assert.IsTrue(defaultChoice.IsCompatible);
-        Assert.IsTrue(defaultChoice.IsRecommended);
         Assert.IsTrue(choices
             .Where(choice => choice.Profile.Requirements is not null)
-            .All(choice => !choice.IsCompatible && !choice.IsRecommended));
+            .All(choice => !choice.IsCompatible));
     }
 
     [TestMethod]
-    public void CreateChoicesMarksInstalledQualityModelAsRecommendedWithoutStorageGate()
+    public void CreateChoicesKeepsInstalledQualityModelCompatibleWithoutStorageGate()
     {
         var choices = SlmModelSetupPlanner.CreateChoices(
             SlmModelCatalog.All,
             CreateHardware(availableStorage: 0),
-            [SlmModelCatalog.Qwen35Quality.Id],
-            SlmModelCatalog.Default.Id);
+            [SlmModelCatalog.Qwen35Quality.Id]);
 
         var qualityChoice = choices.Single(choice =>
             choice.Profile.Id.Equals(SlmModelCatalog.Qwen35Quality.Id, StringComparison.Ordinal));
         Assert.IsTrue(qualityChoice.IsInstalled);
         Assert.IsTrue(qualityChoice.IsCompatible);
-        Assert.IsTrue(qualityChoice.IsRecommended);
     }
 
     [TestMethod]
@@ -49,25 +45,13 @@ public sealed class SlmModelSetupPlannerTests
         var choices = SlmModelSetupPlanner.CreateChoices(
             SlmModelCatalog.All,
             CreateHardware(availableStorage: 10 * Gibibyte),
-            installedModelIds: [],
-            SlmModelCatalog.Default.Id);
+            installedModelIds: []);
 
         Assert.HasCount(SlmModelCatalog.All.Count, choices);
         Assert.IsTrue(choices.All(choice =>
             !string.IsNullOrWhiteSpace(choice.Profile.LimitationNotice)));
         Assert.IsTrue(choices.All(choice =>
             choice.Profile.LanguageSupport.Equals("English", StringComparison.Ordinal)));
-    }
-
-    [TestMethod]
-    public void CreateChoicesRejectsFallbackOutsideCatalog()
-    {
-        Assert.ThrowsExactly<ArgumentException>(() =>
-            SlmModelSetupPlanner.CreateChoices(
-                SlmModelCatalog.All,
-                hardware: null,
-                installedModelIds: [],
-                fallbackModelId: "not-in-catalog"));
     }
 
     private static HardwareProfile CreateHardware(long availableStorage) => new(

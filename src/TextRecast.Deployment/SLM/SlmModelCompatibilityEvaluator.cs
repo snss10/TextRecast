@@ -3,7 +3,7 @@ using TextRecast.Infrastructure.Hardware;
 
 namespace TextRecast.Infrastructure.SLM;
 
-public static class SlmModelRecommender
+public static class SlmModelCompatibilityEvaluator
 {
     public const double MinimumQualityScore = 8.0;
     public const double MinimumTokensPerSecond = 5.0;
@@ -11,47 +11,7 @@ public static class SlmModelRecommender
     public const long StorageReserveBytes = 512L * 1024 * 1024;
     public const double PeakMemoryReserveFactor = 1.30;
 
-    public static SlmModelRecommendation Recommend(
-        HardwareProfile hardware,
-        IEnumerable<SlmModelProfile> profiles,
-        IReadOnlySet<string>? installedModelIds = null)
-    {
-        ArgumentNullException.ThrowIfNull(hardware);
-        ArgumentNullException.ThrowIfNull(profiles);
-
-        installedModelIds ??= new HashSet<string>(StringComparer.Ordinal);
-        var assessments = profiles
-            .Select(profile => Assess(
-                hardware,
-                profile,
-                installedModelIds.Contains(profile.Id)))
-            .ToArray();
-
-        var selected = assessments
-            .Where(assessment => assessment.IsEligible)
-            .OrderByDescending(assessment => assessment.Profile.Requirements!.Tier)
-            .ThenByDescending(assessment => assessment.Profile.Requirements!.QualityScore)
-            .ThenByDescending(assessment => assessment.Profile.Requirements!.MeasuredTokensPerSecond)
-            .ThenBy(assessment => assessment.Profile.ExpectedFileSize)
-            .FirstOrDefault();
-
-        if (selected is null)
-        {
-            var reason = assessments.Length == 0
-                ? "No measured model profiles are available."
-                : "No model safely meets the measured hardware, storage, and responsiveness requirements.";
-            return new SlmModelRecommendation(null, reason, assessments);
-        }
-
-        var requirements = selected.Profile.Requirements!;
-        var recommendationReason = string.Create(
-            CultureInfo.InvariantCulture,
-            $"{selected.Profile.Id} is the highest compatible {requirements.Tier} tier option (measured quality {requirements.QualityScore:F1}/10).");
-
-        return new SlmModelRecommendation(selected.Profile, recommendationReason, assessments);
-    }
-
-    public static SlmModelAssessment Assess(
+    public static SlmModelCompatibilityAssessment Assess(
         HardwareProfile hardware,
         SlmModelProfile profile,
         bool modelInstalled = false)
@@ -139,14 +99,11 @@ public static class SlmModelRecommender
         return checked((long)Math.Ceiling(peakWorkingSetBytes * PeakMemoryReserveFactor) + MemoryReserveBytes);
     }
 
-    private static SlmModelAssessment CreateAssessment(
+    private static SlmModelCompatibilityAssessment CreateAssessment(
         SlmModelProfile profile,
         List<string> reasons)
     {
-        var warning = reasons.Count == 0
-            ? null
-            : "Manual selection is not recommended: " + string.Join(" ", reasons);
-        return new SlmModelAssessment(profile, reasons.Count == 0, reasons, warning);
+        return new SlmModelCompatibilityAssessment(profile, reasons.Count == 0, reasons);
     }
 
     private static string FormatBytes(long bytes)
@@ -156,13 +113,7 @@ public static class SlmModelRecommender
     }
 }
 
-public sealed record SlmModelAssessment(
+public sealed record SlmModelCompatibilityAssessment(
     SlmModelProfile Profile,
     bool IsEligible,
-    IReadOnlyList<string> RejectionReasons,
-    string? ManualOverrideWarning);
-
-public sealed record SlmModelRecommendation(
-    SlmModelProfile? RecommendedProfile,
-    string Reason,
-    IReadOnlyList<SlmModelAssessment> Assessments);
+    IReadOnlyList<string> RejectionReasons);

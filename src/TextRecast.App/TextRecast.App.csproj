@@ -29,8 +29,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Resource Include="$(MSBuildProjectDirectory)\Assets\Brand\TextRecast.ico"
+              Link="Assets\Brand\TextRecast.ico" />
     <Resource Include="Assets\Brand\textrecast-icon.png" />
-    <Resource Include="Assets\Brand\textrecast-mark.png" />
   </ItemGroup>
 
   <ItemGroup>
@@ -48,9 +49,6 @@
     <None Include="..\..\THIRD-PARTY-NOTICES.md"
           Link="THIRD-PARTY-NOTICES.md"
           CopyToOutputDirectory="PreserveNewest"
-          CopyToPublishDirectory="PreserveNewest" />
-    <None Include="..\..\NSIS-LICENSE.txt"
-          Link="NSIS-LICENSE.txt"
           CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 

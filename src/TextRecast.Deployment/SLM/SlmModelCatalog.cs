@@ -56,7 +56,6 @@ public static class SlmModelCatalog
         LicenseExpression = "Apache-2.0",
         Requirements = new SlmModelRequirements
         {
-            Tier = SlmModelTier.Balanced,
             QualityScore = 9.77,
             PeakWorkingSetBytes = 1708875776,
             MeasuredTokensPerSecond = 14.20
@@ -88,7 +87,6 @@ public static class SlmModelCatalog
         LicenseExpression = "Apache-2.0",
         Requirements = new SlmModelRequirements
         {
-            Tier = SlmModelTier.Quality,
             QualityScore = 9.75,
             PeakWorkingSetBytes = 3515650048,
             MeasuredTokensPerSecond = 6.27
@@ -120,7 +118,6 @@ public static class SlmModelCatalog
         LicenseExpression = "Apache-2.0",
         Requirements = new SlmModelRequirements
         {
-            Tier = SlmModelTier.Balanced,
             QualityScore = 9.49,
             PeakWorkingSetBytes = 2896392192,
             MeasuredTokensPerSecond = 9.13

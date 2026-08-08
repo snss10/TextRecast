@@ -111,7 +111,6 @@ function Assert-InstalledVersion {
         "NOTICE",
         "PRIVACY.md",
         "THIRD-PARTY-NOTICES.md",
-        "NSIS-LICENSE.txt",
         "DOTNET-LICENSE.txt",
         "DOTNET-THIRD-PARTY-NOTICES.txt",
         "WPF-LICENSE.txt",
@@ -121,6 +120,10 @@ function Assert-InstalledVersion {
         if (-not (Test-Path -LiteralPath (Join-Path $applicationDirectory $file) -PathType Leaf)) {
             throw "The installed payload is missing required file: $file"
         }
+    }
+
+    if (Test-Path -LiteralPath (Join-Path $applicationDirectory "NSIS-LICENSE.txt") -PathType Leaf) {
+        throw "The redundant standalone NSIS notice must not be installed; its terms belong in THIRD-PARTY-NOTICES.md."
     }
 
     $payloadVersion = Get-Content -LiteralPath (Join-Path $applicationDirectory ".textrecast-payload-complete") -Raw

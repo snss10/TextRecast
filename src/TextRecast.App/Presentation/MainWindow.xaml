@@ -3,9 +3,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
         Title="TextRecast"
-        Icon="/TextRecast;component/Assets/Brand/textrecast-icon.png"
-        Width="56"
-        Height="56"
+        Icon="/TextRecast;component/Assets/Brand/TextRecast.ico"
+        Width="52"
+        Height="52"
         WindowStyle="None"
         ResizeMode="NoResize"
         AllowsTransparency="True"
@@ -64,8 +64,8 @@
   </Window.ContextMenu>
 
   <Grid x:Name="LauncherSurface"
-        Width="56"
-        Height="56"
+        Width="52"
+        Height="52"
         Focusable="True"
         ToolTip="TextRecast — Format selected text"
         AutomationProperties.Name="TextRecast — Format selected text"
@@ -74,18 +74,20 @@
         MouseMove="LauncherSurface_MouseMove"
         MouseLeftButtonUp="LauncherSurface_MouseLeftButtonUp"
         KeyDown="LauncherSurface_KeyDown">
-    <Border CornerRadius="28"
+    <Border CornerRadius="8"
             Background="#111318"
             Effect="{StaticResource LauncherShadow}">
       <Border BorderBrush="{DynamicResource LauncherBorderBrush}"
               BorderThickness="1"
-              CornerRadius="28"
-              Padding="3">
-        <Image Width="50"
-               Height="50"
-               Source="/TextRecast;component/Assets/Brand/textrecast-mark.png"
+              CornerRadius="8"
+              Padding="4">
+        <Image Width="42"
+               Height="42"
+               HorizontalAlignment="Center"
+               VerticalAlignment="Center"
+               Source="/TextRecast;component/Assets/Brand/textrecast-icon.png"
                Stretch="Uniform"
-               SnapsToDevicePixels="True"
+               SnapsToDevicePixels="False"
                RenderOptions.BitmapScalingMode="HighQuality" />
       </Border>
     </Border>

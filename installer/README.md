@@ -61,4 +61,4 @@ The packaging smoke test installs into an isolated per-user location, verifies p
 
 ## Licensing
 
-NSIS 3.12 and its zlib compression module are used under the zlib/libpng license. The applicable notice is kept in `NSIS-LICENSE.txt` and installed beside the application. The package also contains TextRecast's Apache license, privacy notice, project notice, third-party notices, and the exact legal files from the bundled .NET and WPF runtime packs.
+NSIS 3.12 and its zlib compression module are used under the zlib/libpng license. Their attribution and complete license terms are consolidated in `THIRD-PARTY-NOTICES.md`; a duplicate standalone NSIS notice is not installed. The package also contains TextRecast's Apache license, privacy notice, project notice, and the exact legal files from the bundled .NET and WPF runtime packs.

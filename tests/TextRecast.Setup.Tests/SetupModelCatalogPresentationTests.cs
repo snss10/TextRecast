@@ -23,8 +23,7 @@ public sealed class SetupModelCatalogPresentationTests
         var planned = SlmModelSetupPlanner.CreateChoices(
             SlmModelCatalog.All,
             hardware,
-            installedModelIds: [],
-            SlmModelCatalog.Default.Id);
+            installedModelIds: []);
 
         var rows = SetupModelCatalogPresentation.CreateChoices(planned);
 
@@ -48,6 +47,7 @@ public sealed class SetupModelCatalogPresentationTests
         Assert.IsFalse(properties.Contains("Quantization"));
         Assert.IsFalse(properties.Contains("Experimental"));
         Assert.IsFalse(properties.Contains("Language"));
+        Assert.IsFalse(properties.Contains("Recommended"));
     }
 
     [TestMethod]
@@ -57,6 +57,46 @@ public sealed class SetupModelCatalogPresentationTests
         StringAssert.Contains(SetupLegalDocuments.Privacy, "Privacy");
         Assert.IsFalse(string.IsNullOrWhiteSpace(SetupLegalDocuments.Notice));
         Assert.IsFalse(string.IsNullOrWhiteSpace(SetupLegalDocuments.ThirdPartyNotices));
+    }
+
+    [TestMethod]
+    public void ThirdPartyNoticesCoverProductionPackagesAndCatalogModels()
+    {
+        var requiredPackages = new[]
+        {
+            "CommunityToolkit.HighPerformance | 8.4.2",
+            "LLamaSharp | 0.27.0",
+            "LLamaSharp.Backend.Cpu | 0.27.0",
+            "MahApps.Metro.IconPacks.Core | 6.2.1",
+            "MahApps.Metro.IconPacks.Lucide | 6.2.1",
+            "Microsoft.Bcl.AsyncInterfaces | 10.0.5",
+            "Microsoft.Bcl.Memory | 10.0.5",
+            "Microsoft.Extensions.AI.Abstractions | 10.4.1",
+            "Microsoft.Extensions.DependencyInjection.Abstractions | 10.0.5",
+            "Microsoft.Extensions.Logging.Abstractions | 10.0.5",
+            "System.Interactive.Async | 7.0.0",
+            "System.Linq.Async | 7.0.0",
+            "System.Numerics.Tensors | 10.0.5"
+        };
+
+        foreach (var package in requiredPackages)
+        {
+            StringAssert.Contains(SetupLegalDocuments.ThirdPartyNotices, package);
+        }
+
+        StringAssert.Contains(SetupLegalDocuments.ThirdPartyNotices, "Lucide ISC License");
+        StringAssert.Contains(SetupLegalDocuments.ThirdPartyNotices, "Feather MIT License");
+        StringAssert.Contains(SetupLegalDocuments.ThirdPartyNotices, "NSIS 3.12");
+
+        foreach (var profile in SlmModelCatalog.All)
+        {
+            StringAssert.Contains(
+                SetupLegalDocuments.ThirdPartyNotices,
+                profile.SourceRepository);
+            StringAssert.Contains(
+                SetupLegalDocuments.ThirdPartyNotices,
+                profile.LicenseExpression);
+        }
     }
 
     [STATestMethod]

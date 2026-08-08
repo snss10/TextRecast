@@ -31,13 +31,13 @@ public sealed class FormatTextWorkflowTests
     }
 
     [TestMethod]
-    public async Task ApplyAsyncRequiresToneForChangeToneOperation()
+    public async Task GenerateAsyncRequiresToneForChangeToneOperation()
     {
         using var formatter = new StubFormatter("Formatted text");
         var replacement = new StubReplacementService();
         var workflow = CreateWorkflow(formatter, replacement);
 
-        var result = await workflow.ApplyAsync(
+        var result = await workflow.GenerateAsync(
             Selection,
             FormatOperation.ChangeTone,
             tone: null,
@@ -50,13 +50,13 @@ public sealed class FormatTextWorkflowTests
     }
 
     [TestMethod]
-    public async Task ApplyAsyncDoesNotReplaceUnsafeGeneratedText()
+    public async Task GenerateAsyncRejectsUnsafeGeneratedTextWithoutReplacing()
     {
         using var formatter = new StubFormatter("Unsafe\0text");
         var replacement = new StubReplacementService();
         var workflow = CreateWorkflow(formatter, replacement);
 
-        var result = await workflow.ApplyAsync(
+        var result = await workflow.GenerateAsync(
             Selection,
             FormatOperation.Improve,
             tone: null,
@@ -69,13 +69,13 @@ public sealed class FormatTextWorkflowTests
     }
 
     [TestMethod]
-    public async Task ApplyAsyncReplacesValidatedGeneratedText()
+    public async Task GenerateAsyncReturnsValidatedTextWithoutReplacing()
     {
         using var formatter = new StubFormatter("Formatted text");
         var replacement = new StubReplacementService(TextReplacementResult.Ok());
         var workflow = CreateWorkflow(formatter, replacement);
 
-        var result = await workflow.ApplyAsync(
+        var result = await workflow.GenerateAsync(
             Selection,
             FormatOperation.Improve,
             tone: null,
@@ -84,7 +84,24 @@ public sealed class FormatTextWorkflowTests
 
         Assert.IsTrue(result.Success);
         Assert.AreEqual("Formatted text", result.GeneratedText);
+        Assert.AreEqual(0, replacement.CallCount);
+    }
+
+    [TestMethod]
+    public async Task ReplaceAsyncSendsEditedTextToReplacementService()
+    {
+        using var formatter = new StubFormatter("Unused");
+        var replacement = new StubReplacementService(TextReplacementResult.Ok());
+        var workflow = CreateWorkflow(formatter, replacement);
+
+        var result = await workflow.ReplaceAsync(
+            Selection,
+            "User-edited revision",
+            CancellationToken.None);
+
+        Assert.IsTrue(result.Success);
         Assert.AreEqual(1, replacement.CallCount);
+        Assert.AreEqual("User-edited revision", replacement.LastReplacementText);
     }
 
     private static FormatTextWorkflow CreateWorkflow(
@@ -129,12 +146,15 @@ public sealed class FormatTextWorkflowTests
 
         public int CallCount { get; private set; }
 
+        public string? LastReplacementText { get; private set; }
+
         public Task<TextReplacementResult> ReplaceAsync(
             SelectionContext selection,
             string replacementText,
             CancellationToken cancellationToken)
         {
             CallCount++;
+            LastReplacementText = replacementText;
             return Task.FromResult(_result);
         }
     }

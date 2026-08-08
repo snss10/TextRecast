@@ -70,7 +70,7 @@ TextRecast shows the available models before making a network request. Each choi
 | Best quality | Qwen 3.5 4B Q5_K_M | 2.93 GiB | Experimental; verify roles, titles, and deadlines |
 | Alternative | Granite 4.1 3B Q5_K_M | 2.27 GiB | Experimental; higher semantic-drift risk |
 
-These profiles are currently supported for English rewriting only. None is perfect, so review the replaced text in the source application after every operation. Hardware recommendations are guidance; Qwen 2.5 remains selectable when hardware inspection is unavailable.
+These profiles are currently supported for English rewriting only. None is perfect, so review the replaced text in the source application after every operation. Hardware checks can disable an unsafe choice, but they never preselect a model; Qwen 2.5 remains selectable when hardware inspection is unavailable.
 
 Cancelling or losing the connection keeps a validated partial download. Select **Retry** on the same computer to continue from the saved point. TextRecast restarts safely if the server no longer accepts the saved range or the remote file has changed. A model becomes active only after its exact size and SHA-256 checksum pass verification. A valid installed selection is reused on later launches.
 
@@ -212,7 +212,7 @@ For tagged releases, GitHub Actions creates a model-free `TextRecast-vX.Y.Z-win-
 
 - [TextRecast.App](src/TextRecast.App/) contains the WPF presentation layer and application composition.
 - [TextRecast.Core](src/TextRecast.Core/) contains platform-independent workflows, contracts, results, and models.
-- [TextRecast.Deployment](src/TextRecast.Deployment/) contains the model catalog, verified downloads, hardware recommendations, setup state, and installer identity without inference dependencies.
+- [TextRecast.Deployment](src/TextRecast.Deployment/) contains the model catalog, verified downloads, hardware compatibility checks, setup state, and installer identity without inference dependencies.
 - [TextRecast.Infrastructure](src/TextRecast.Infrastructure/) contains local SLM inference and Windows capture/replacement integrations.
 - [TextRecast.Setup](src/TextRecast.Setup/) contains the self-contained managed Windows setup host.
 - [installer](installer/) contains the internal per-user application package definition.

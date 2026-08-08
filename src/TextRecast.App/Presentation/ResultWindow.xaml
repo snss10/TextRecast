@@ -3,260 +3,342 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
         Title="TextRecast"
-        Icon="/TextRecast;component/Assets/Brand/textrecast-icon.png"
-        Width="430"
-        Height="336"
+        Icon="/TextRecast;component/Assets/Brand/TextRecast.ico"
+        Width="560"
+        Height="440"
+        MinWidth="540"
+        MinHeight="400"
         WindowStartupLocation="Manual"
-        WindowStyle="None"
-        ResizeMode="NoResize"
-        AllowsTransparency="True"
+        WindowStyle="SingleBorderWindow"
+        ResizeMode="CanResize"
+        ShowInTaskbar="False"
         Topmost="True"
-        Background="Transparent"
+        Background="{DynamicResource CanvasBrush}"
+        Foreground="{DynamicResource InkBrush}"
+        FontFamily="Segoe UI"
         KeyDown="Window_KeyDown">
-    <Grid>
-        <!-- Keep the expensive shadow on a static visual so busy animations do not
-             invalidate the entire shadowed content tree on every frame. -->
-        <Border Background="{StaticResource SurfaceBrush}"
-                CornerRadius="10"
-                Effect="{StaticResource PanelShadow}"
-                IsHitTestVisible="False" />
-        <Border Background="{StaticResource SurfaceBrush}"
-                BorderBrush="{StaticResource DividerBrush}"
-                BorderThickness="1"
-                CornerRadius="10">
-        <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="40" />
-                <RowDefinition Height="122" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-                <RowDefinition Height="58" />
-            </Grid.RowDefinitions>
+  <Window.Resources>
+    <Style TargetType="ScrollBar" BasedOn="{StaticResource ThinAccentScrollBarStyle}" />
+  </Window.Resources>
+  <Grid x:Name="RootLayout" Background="{DynamicResource CanvasBrush}">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="56" />
+      <RowDefinition Height="54" />
+      <RowDefinition Height="18" />
+      <RowDefinition Height="*" />
+      <RowDefinition Height="*" />
+      <RowDefinition Height="20" />
+      <RowDefinition Height="44" />
+    </Grid.RowDefinitions>
 
-            <Border Grid.Row="0"
-                    Background="{StaticResource HeaderBrush}"
-                    CornerRadius="9,9,0,0"
-                    MouseLeftButtonDown="Header_MouseLeftButtonDown">
-                <Grid Margin="12,0,8,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="24" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="32" />
-                    </Grid.ColumnDefinitions>
-                    <Image Width="22"
-                           Height="22"
-                           Source="/TextRecast;component/Assets/Brand/textrecast-mark.png"
-                           Stretch="Uniform"
-                           VerticalAlignment="Center"
-                           RenderOptions.BitmapScalingMode="HighQuality" />
-                    <TextBlock Grid.Column="1"
-                               Text="TextRecast"
-                               Foreground="White"
-                               FontSize="12.5"
-                               FontWeight="SemiBold"
-                               VerticalAlignment="Center" />
-                    <Button Grid.Column="2"
-                            Width="28"
-                            Height="28"
-                            Style="{StaticResource HeaderButton}"
-                            ToolTip="Close"
-                            AutomationProperties.Name="Close formatter"
-                            Click="Close_Click">
-                        <iconPacks:PackIconLucide Kind="X" Width="14" Height="14" />
-                    </Button>
-                </Grid>
-            </Border>
+    <Border Grid.Row="0"
+            BorderBrush="{DynamicResource DividerBrush}"
+            BorderThickness="0,0,0,1">
+      <Grid Margin="10,6,10,4">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="54" />
+          <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Image Width="36"
+               Height="36"
+               HorizontalAlignment="Left"
+               VerticalAlignment="Center"
+               Source="/TextRecast;component/Assets/Brand/textrecast-icon.png"
+               Stretch="Uniform"
+               RenderOptions.BitmapScalingMode="HighQuality" />
+        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+          <TextBlock Text="Format selected text"
+                     FontSize="15"
+                     FontWeight="SemiBold"
+                     Foreground="{DynamicResource InkBrush}" />
+          <TextBlock Margin="0,2,0,0"
+                     Text="Generate locally, review the revision, then choose whether to replace your selection."
+                     FontSize="9"
+                     Foreground="{DynamicResource SecondaryTextBrush}"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+      </Grid>
+    </Border>
 
-            <Grid Grid.Row="1" Margin="16,18,18,8">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="18" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-                <TextBlock x:Name="PreviewLabel"
-                           Text="Selected text"
-                           Foreground="{StaticResource InkBrush}"
-                           FontSize="10.5"
-                           FontWeight="SemiBold" />
-                <TextBox x:Name="ResultTextBox"
-                         Grid.Row="1"
-                         Height="69"
-                         VerticalAlignment="Top"
-                         TextWrapping="Wrap"
-                         IsReadOnly="True"
-                         VerticalScrollBarVisibility="Auto"
-                         BorderBrush="{StaticResource DividerBrush}"
-                         BorderThickness="1"
-                         Background="{StaticResource SurfaceBrush}"
-                         Foreground="{StaticResource InkBrush}"
-                         FontSize="12.5"
-                         Padding="10,8" />
-            </Grid>
-
-            <Grid Grid.Row="2" Margin="16,0,18,8">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="18" />
-                    <RowDefinition Height="32" />
-                </Grid.RowDefinitions>
-                <TextBlock Text="Format as"
-                           Margin="2,0"
-                           Foreground="{StaticResource InkBrush}"
-                           FontSize="10.5"
-                           FontWeight="SemiBold" />
-                <Border Grid.Row="1"
-                        Background="{StaticResource SurfaceBrush}"
-                        BorderBrush="{StaticResource DividerBrush}"
-                        BorderThickness="1"
-                        CornerRadius="4">
-                <UniformGrid x:Name="OperationChoices" Columns="5">
-                    <RadioButton Tag="Improve" GroupName="Operations" Style="{StaticResource SegmentChoiceButton}" AutomationProperties.Name="Improve writing" Checked="Operation_Checked">
-                        <StackPanel Orientation="Horizontal">
-                            <iconPacks:PackIconLucide Kind="Sparkles" Width="14" Height="14" VerticalAlignment="Center" />
-                            <TextBlock Text="Improve" Margin="4,0,0,0" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </RadioButton>
-                    <RadioButton Tag="Shorten" GroupName="Operations" Style="{StaticResource SegmentChoiceButton}" AutomationProperties.Name="Make shorter" Checked="Operation_Checked">
-                        <StackPanel Orientation="Horizontal">
-                            <iconPacks:PackIconLucide Kind="ListMinus" Width="14" Height="14" VerticalAlignment="Center" />
-                            <TextBlock Text="Shorter" Margin="4,0,0,0" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </RadioButton>
-                    <RadioButton Tag="Lengthen" GroupName="Operations" Style="{StaticResource SegmentChoiceButton}" AutomationProperties.Name="Make longer" Checked="Operation_Checked">
-                        <StackPanel Orientation="Horizontal">
-                            <iconPacks:PackIconLucide Kind="ListPlus" Width="14" Height="14" VerticalAlignment="Center" />
-                            <TextBlock Text="Longer" Margin="4,0,0,0" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </RadioButton>
-                    <RadioButton Tag="Summarize" GroupName="Operations" Style="{StaticResource SegmentChoiceButton}" AutomationProperties.Name="Summarize" Checked="Operation_Checked">
-                        <StackPanel Orientation="Horizontal">
-                            <iconPacks:PackIconLucide Kind="ListCollapse" Width="14" Height="14" VerticalAlignment="Center" />
-                            <TextBlock Text="Summarize" Margin="4,0,0,0" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </RadioButton>
-                    <RadioButton Tag="ChangeTone" GroupName="Operations" Style="{StaticResource SegmentChoiceButton}" AutomationProperties.Name="Change tone" Checked="Operation_Checked">
-                        <StackPanel Orientation="Horizontal">
-                            <iconPacks:PackIconLucide Kind="SlidersHorizontal" Width="14" Height="14" VerticalAlignment="Center" />
-                            <TextBlock Text="Tone" Margin="4,0,0,0" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </RadioButton>
-                </UniformGrid>
-                </Border>
-            </Grid>
-
-            <Border x:Name="TonePanel"
-                    Grid.Row="3"
-                    Height="26"
-                    Margin="16,4,18,8"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Top"
-                    Background="{StaticResource SurfaceBrush}"
-                    BorderBrush="{StaticResource DividerBrush}"
-                    BorderThickness="1"
-                    CornerRadius="4"
-                    Visibility="Collapsed">
-                <UniformGrid x:Name="ToneChoices" Columns="5">
-                    <RadioButton Tag="Professional"
-                                 GroupName="Tones"
-                                 AutomationProperties.Name="Professional tone"
-                                 Content="Professional"
-                                 Style="{StaticResource ToneChoiceButton}" />
-                    <RadioButton Tag="Casual"
-                                 GroupName="Tones"
-                                 AutomationProperties.Name="Casual tone"
-                                 Content="Casual"
-                                 Style="{StaticResource ToneChoiceButton}" />
-                    <RadioButton Tag="Friendly"
-                                 GroupName="Tones"
-                                 AutomationProperties.Name="Friendly tone"
-                                 Content="Friendly"
-                                 Style="{StaticResource ToneChoiceButton}" />
-                    <RadioButton Tag="Formal"
-                                 GroupName="Tones"
-                                 AutomationProperties.Name="Formal tone"
-                                 Content="Formal"
-                                 Style="{StaticResource ToneChoiceButton}" />
-                    <RadioButton Tag="Direct"
-                                 GroupName="Tones"
-                                 AutomationProperties.Name="Direct tone"
-                                 Content="Direct"
-                                 Style="{StaticResource ToneChoiceButton}" />
-                </UniformGrid>
-            </Border>
-
-            <Border Grid.Row="5"
-                    Background="{StaticResource FooterBrush}"
-                    BorderBrush="{StaticResource DividerBrush}"
-                    BorderThickness="0,1,0,0"
-                    CornerRadius="0,0,9,9">
-            <Grid Margin="14,13,20,13">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="8" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <Grid ClipToBounds="True">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="20" />
-                        <RowDefinition Height="3" />
-                    </Grid.RowDefinitions>
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Top">
-                        <iconPacks:PackIconLucide x:Name="StatusIcon"
-                                                  Kind="Circle"
-                                                  Width="12"
-                                                  Height="12"
-                                                  Margin="2,0,8,0"
-                                                  Foreground="{StaticResource SecondaryTextBrush}"
-                                                  VerticalAlignment="Center" />
-                        <TextBlock x:Name="StatusTextBlock"
-                                   Foreground="{StaticResource SecondaryTextBrush}"
-                                   FontSize="11"
-                                   ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
-                                   TextTrimming="CharacterEllipsis" />
-                    </StackPanel>
-                    <Grid x:Name="ActivityProgressBar"
-                          Grid.Row="1"
-                          Margin="4,0,11,0"
-                          Background="{StaticResource DividerBrush}"
-                          ClipToBounds="True"
-                          Visibility="Collapsed">
-                        <Border Width="124"
-                                HorizontalAlignment="Left"
-                                Background="{StaticResource AccentBrush}">
-                            <Border.RenderTransform>
-                                <TranslateTransform x:Name="BusyIndicatorTransform" />
-                            </Border.RenderTransform>
-                        </Border>
-                    </Grid>
-                </Grid>
-                <Button x:Name="CancelButton"
-                        Grid.Column="1"
-                        AutomationProperties.Name="Cancel formatting"
-                        Style="{StaticResource SecondaryButton}"
-                        Visibility="Collapsed"
-                        Click="Cancel_Click">
-                    <StackPanel Orientation="Horizontal">
-                        <iconPacks:PackIconLucide Kind="X" Width="12" Height="12" VerticalAlignment="Center" />
-                        <TextBlock Text="Cancel" Margin="5,0,0,0" VerticalAlignment="Center" />
-                    </StackPanel>
-                </Button>
-                <Button x:Name="ApplyButton"
-                        Grid.Column="3"
-                        AutomationProperties.Name="Apply"
-                        Style="{StaticResource PrimaryButton}"
-                        Click="Apply_Click">
-                    <StackPanel Orientation="Horizontal">
-                        <iconPacks:PackIconLucide x:Name="ApplyButtonIcon"
-                                                  Kind="Check"
-                                                  Width="12"
-                                                  Height="12"
-                                                  VerticalAlignment="Center" />
-                        <TextBlock x:Name="ApplyButtonText" Text="Apply" Margin="5,0,0,0" VerticalAlignment="Center" />
-                    </StackPanel>
-                </Button>
-            </Grid>
-            </Border>
+    <Grid Grid.Row="1" Margin="10,4,10,5">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="15" />
+        <RowDefinition Height="26" />
+      </Grid.RowDefinitions>
+      <TextBlock Text="Operation"
+                 Margin="1,0,0,0"
+                 FontSize="9.5"
+                 FontWeight="SemiBold"
+                 Foreground="{DynamicResource InkBrush}"
+                 VerticalAlignment="Top" />
+      <Border Grid.Row="1"
+              BorderBrush="{DynamicResource DividerBrush}"
+              BorderThickness="1"
+              CornerRadius="4"
+              ClipToBounds="True">
+        <Grid x:Name="OperationChoices">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="159*" />
+            <ColumnDefinition Width="216*" />
+            <ColumnDefinition Width="196*" />
+            <ColumnDefinition Width="206*" />
+            <ColumnDefinition Width="179*" />
+          </Grid.ColumnDefinitions>
+          <RadioButton Grid.Column="0" Tag="Improve" GroupName="Operations" Style="{StaticResource RewriteOperationButtonStyle}" AutomationProperties.Name="Improve writing" Checked="Operation_Checked">
+            <StackPanel Orientation="Horizontal">
+              <iconPacks:PackIconLucide Kind="Pencil" Width="10" Height="10" VerticalAlignment="Center" />
+              <TextBlock Text="Improve" Margin="5,0,0,0" VerticalAlignment="Center" />
+            </StackPanel>
+          </RadioButton>
+          <RadioButton Grid.Column="1" Tag="Shorten" GroupName="Operations" Style="{StaticResource RewriteOperationButtonStyle}" AutomationProperties.Name="Make shorter" Checked="Operation_Checked">
+            <StackPanel Orientation="Horizontal">
+              <iconPacks:PackIconLucide Kind="ArrowDownToLine" Width="10" Height="10" VerticalAlignment="Center" />
+              <TextBlock Text="Shorter" Margin="5,0,0,0" VerticalAlignment="Center" />
+            </StackPanel>
+          </RadioButton>
+          <RadioButton Grid.Column="2" Tag="Lengthen" GroupName="Operations" Style="{StaticResource RewriteOperationButtonStyle}" AutomationProperties.Name="Make longer" Checked="Operation_Checked">
+            <StackPanel Orientation="Horizontal">
+              <iconPacks:PackIconLucide Kind="Maximize2" Width="10" Height="10" VerticalAlignment="Center" />
+              <TextBlock Text="Longer" Margin="5,0,0,0" VerticalAlignment="Center" />
+            </StackPanel>
+          </RadioButton>
+          <RadioButton Grid.Column="3" Tag="Summarize" GroupName="Operations" Style="{StaticResource RewriteOperationButtonStyle}" AutomationProperties.Name="Summarize" Checked="Operation_Checked">
+            <StackPanel Orientation="Horizontal">
+              <iconPacks:PackIconLucide Kind="List" Width="10" Height="10" VerticalAlignment="Center" />
+              <TextBlock Text="Summarize" Margin="5,0,0,0" VerticalAlignment="Center" />
+            </StackPanel>
+          </RadioButton>
+          <RadioButton Grid.Column="4" Tag="ChangeTone" GroupName="Operations" Style="{StaticResource RewriteOperationButtonStyle}" AutomationProperties.Name="Change tone" Checked="Operation_Checked">
+            <StackPanel Orientation="Horizontal">
+              <iconPacks:PackIconLucide Kind="MessageSquare" Width="10" Height="10" VerticalAlignment="Center" />
+              <TextBlock Text="Tone" Margin="5,0,0,0" VerticalAlignment="Center" />
+            </StackPanel>
+          </RadioButton>
         </Grid>
-        </Border>
+      </Border>
     </Grid>
+
+    <Grid Grid.Row="2" Margin="10,0">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="20" />
+        <ColumnDefinition Width="*" />
+      </Grid.ColumnDefinitions>
+      <iconPacks:PackIconLucide Kind="ShieldCheck"
+                                Width="13"
+                                Height="13"
+                                Foreground="{DynamicResource AccentBrush}"
+                                VerticalAlignment="Center" />
+      <TextBlock x:Name="ModelSummaryTextBlock"
+                 Grid.Column="1"
+                 Margin="5,0,0,0"
+                 Text="Generated locally"
+                 FontSize="9.5"
+                 Foreground="{DynamicResource SecondaryTextBrush}"
+                 VerticalAlignment="Center" />
+    </Grid>
+
+    <Border x:Name="OriginalPanelBorder"
+            Grid.Row="3"
+            Margin="10,0,10,5"
+            MinHeight="90"
+            Background="{DynamicResource SurfaceBrush}"
+            BorderBrush="{DynamicResource DividerBrush}"
+            BorderThickness="1"
+            CornerRadius="4">
+      <Grid>
+        <Grid.RowDefinitions>
+          <RowDefinition Height="26" />
+          <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1">
+          <TextBlock Text="Original selection"
+                     Margin="7,0,0,0"
+                     FontSize="9.5"
+                     VerticalAlignment="Center" />
+        </Border>
+        <TextBox x:Name="OriginalTextBox"
+                 Grid.Row="1"
+                 IsReadOnly="True"
+                 TextWrapping="Wrap"
+                 VerticalScrollBarVisibility="Auto"
+                 HorizontalScrollBarVisibility="Disabled"
+                 Background="Transparent"
+                 Foreground="{DynamicResource InkBrush}"
+                 BorderThickness="0"
+                 Padding="8,5"
+                 FontSize="9.5" />
+      </Grid>
+    </Border>
+
+    <Border x:Name="RevisedPanelBorder"
+            Grid.Row="4"
+            Margin="10,0"
+            MinHeight="90"
+            Background="{DynamicResource SurfaceBrush}"
+            BorderThickness="1"
+            CornerRadius="4">
+      <Border.Style>
+        <Style TargetType="Border">
+          <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+          <Style.Triggers>
+            <DataTrigger Binding="{Binding Text, ElementName=RevisedTextBox}" Value="">
+              <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+            </DataTrigger>
+          </Style.Triggers>
+        </Style>
+      </Border.Style>
+      <Grid>
+        <Grid.RowDefinitions>
+          <RowDefinition Height="26" />
+          <RowDefinition Height="*" />
+          <RowDefinition Height="3" />
+        </Grid.RowDefinitions>
+        <Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1">
+          <TextBlock Text="Revised — editable"
+                     Margin="7,0,0,0"
+                     FontSize="9.5"
+                     VerticalAlignment="Center" />
+        </Border>
+        <TextBox x:Name="RevisedTextBox"
+                 Grid.Row="1"
+                 TextWrapping="Wrap"
+                 AcceptsReturn="True"
+                 VerticalScrollBarVisibility="Auto"
+                 HorizontalScrollBarVisibility="Disabled"
+                 Background="Transparent"
+                 Foreground="{DynamicResource InkBrush}"
+                 BorderThickness="0"
+                 Padding="8,7"
+                 FontSize="9.5"
+                 TextChanged="RevisedTextBox_TextChanged" />
+        <Grid x:Name="ActivityProgressBar"
+              Grid.Row="2"
+              Background="{DynamicResource DividerBrush}"
+              ClipToBounds="True"
+              Visibility="Collapsed">
+          <Border Width="150"
+                  HorizontalAlignment="Left"
+                  Background="{DynamicResource AccentBrush}">
+            <Border.RenderTransform>
+              <TranslateTransform x:Name="BusyIndicatorTransform" />
+            </Border.RenderTransform>
+          </Border>
+        </Grid>
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="5"
+          Margin="18,0,10,0"
+          Background="{DynamicResource CanvasBrush}">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="18" />
+        <ColumnDefinition Width="*" />
+      </Grid.ColumnDefinitions>
+      <iconPacks:PackIconLucide x:Name="StatusIcon"
+                                Kind="ShieldCheck"
+                                Width="12"
+                                Height="12"
+                                Foreground="{DynamicResource SecondaryTextBrush}"
+                                VerticalAlignment="Center" />
+      <TextBlock x:Name="StatusTextBlock"
+                 Grid.Column="1"
+                 Margin="4,0,0,0"
+                 Text="Source unchanged until you choose Replace selection"
+                 FontSize="9"
+                 Foreground="{DynamicResource SecondaryTextBrush}"
+                 TextTrimming="CharacterEllipsis"
+                 VerticalAlignment="Center" />
+    </Grid>
+
+    <Border Grid.Row="6"
+            Padding="10,8,10,6"
+            Background="{DynamicResource FooterBrush}"
+            BorderBrush="{DynamicResource DividerBrush}"
+            BorderThickness="0,1,0,0">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <StackPanel x:Name="FooterCaptureMessagePanel"
+                    Margin="0,0,8,0"
+                    VerticalAlignment="Center"
+                    Orientation="Horizontal"
+                    Visibility="Collapsed">
+          <iconPacks:PackIconLucide Kind="CircleAlert"
+                                    Width="12"
+                                    Height="12"
+                                    Foreground="{DynamicResource WarningBrush}"
+                                    VerticalAlignment="Center" />
+          <TextBlock x:Name="FooterCaptureMessageTextBlock"
+                     Margin="5,0,0,0"
+                     MaxWidth="136"
+                     FontSize="9"
+                     Foreground="{DynamicResource SecondaryTextBrush}"
+                     TextTrimming="CharacterEllipsis"
+                     ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
+                     VerticalAlignment="Center" />
+        </StackPanel>
+        <StackPanel Grid.Column="1"
+                    HorizontalAlignment="Right"
+                    Orientation="Horizontal">
+        <Button x:Name="CancelButton"
+                Width="76"
+                Margin="0,0,6,0"
+                Content="Cancel"
+                Style="{StaticResource RewriteActionButtonStyle}"
+                AutomationProperties.Name="Cancel"
+                Click="Cancel_Click" />
+        <Button x:Name="RegenerateButton"
+                Width="107"
+                Margin="0,0,6,0"
+                Style="{StaticResource RewriteActionButtonStyle}"
+                AutomationProperties.Name="Regenerate"
+                Click="Regenerate_Click">
+          <StackPanel Orientation="Horizontal">
+            <iconPacks:PackIconLucide Kind="RefreshCw" Width="12" Height="12" VerticalAlignment="Center" />
+            <TextBlock x:Name="RegenerateButtonText" Text="Regenerate" Margin="5,0,0,0" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+        <Button x:Name="CopyButton"
+                Width="70"
+                Margin="0,0,6,0"
+                Style="{StaticResource RewriteActionButtonStyle}"
+                AutomationProperties.Name="Copy revised text"
+                Click="Copy_Click">
+          <StackPanel Orientation="Horizontal">
+            <iconPacks:PackIconLucide Kind="Copy" Width="12" Height="12" VerticalAlignment="Center" />
+            <TextBlock Text="Copy" Margin="5,0,0,0" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+        <Button x:Name="ReplaceButton"
+                Width="112"
+                Style="{StaticResource RewritePrimaryButtonStyle}"
+                AutomationProperties.Name="Replace selection"
+                Content="Replace selection"
+                Click="Replace_Click" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <Border x:Name="TonePanel"
+            Grid.Row="2"
+            Margin="122,-5,10,3"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Center"
+            Background="{DynamicResource SurfaceBrush}"
+            BorderBrush="{DynamicResource DividerBrush}"
+            BorderThickness="1"
+            CornerRadius="4"
+            Panel.ZIndex="2"
+            Visibility="Collapsed">
+      <UniformGrid x:Name="ToneChoices" Columns="5">
+        <RadioButton Tag="Professional" GroupName="Tones" Content="Professional" Style="{StaticResource RewriteToneButtonStyle}" Checked="Tone_Checked" />
+        <RadioButton Tag="Casual" GroupName="Tones" Content="Casual" Style="{StaticResource RewriteToneButtonStyle}" Checked="Tone_Checked" />
+        <RadioButton Tag="Friendly" GroupName="Tones" Content="Friendly" Style="{StaticResource RewriteToneButtonStyle}" Checked="Tone_Checked" />
+        <RadioButton Tag="Formal" GroupName="Tones" Content="Formal" Style="{StaticResource RewriteToneButtonStyle}" Checked="Tone_Checked" />
+        <RadioButton Tag="Direct" GroupName="Tones" Content="Direct" Style="{StaticResource RewriteToneButtonStyle}" Checked="Tone_Checked" />
+      </UniformGrid>
+    </Border>
+  </Grid>
 </Window>

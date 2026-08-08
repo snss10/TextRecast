@@ -1,6 +1,5 @@
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 
 namespace TextRecast.App.Presentation;
 
@@ -13,15 +12,24 @@ internal sealed partial class InformationWindow : Window
         Title = $"{content.Title} - TextRecast";
         HeadingTextBlock.Text = content.Heading;
         DescriptionTextBlock.Text = content.Description;
-        foreach (var page in content.Pages)
+        if (content.Pages.Count == 1)
         {
-            PagesTabControl.Items.Add(CreateTab(page));
+            PagesTabControl.Visibility = Visibility.Collapsed;
+            SinglePagePanel.Visibility = Visibility.Visible;
+            SinglePageTextBox.Text = content.Pages[0].Content;
         }
-
-        if (PagesTabControl.Items.Count == 1 &&
-            PagesTabControl.Items[0] is TabItem onlyTab)
+        else
         {
-            onlyTab.IsSelected = true;
+            foreach (var page in content.Pages)
+            {
+                PagesTabControl.Items.Add(CreateTab(page));
+            }
+
+            if (PagesTabControl.Items.Count > 0 &&
+                PagesTabControl.Items[0] is TabItem firstTab)
+            {
+                firstTab.IsSelected = true;
+            }
         }
 
         ApplicationTheme.Apply(this);
@@ -42,14 +50,16 @@ internal sealed partial class InformationWindow : Window
                 AcceptsReturn = true,
                 VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
                 HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                VerticalAlignment = VerticalAlignment.Stretch,
                 Background = (System.Windows.Media.Brush)
                     global::System.Windows.Application.Current.FindResource("SurfaceBrush"),
                 Foreground = (System.Windows.Media.Brush)
                     global::System.Windows.Application.Current.FindResource("InkBrush"),
                 BorderThickness = new Thickness(0),
-                Padding = new Thickness(14),
+                Padding = new Thickness(10),
                 FontFamily = new System.Windows.Media.FontFamily("Segoe UI"),
-                FontSize = 12
+                FontSize = 10.5
             }
         };
     }
@@ -57,13 +67,5 @@ internal sealed partial class InformationWindow : Window
     private void Close_Click(object sender, RoutedEventArgs e)
     {
         Close();
-    }
-
-    private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-    {
-        if (e.ButtonState == MouseButtonState.Pressed)
-        {
-            DragMove();
-        }
     }
 }

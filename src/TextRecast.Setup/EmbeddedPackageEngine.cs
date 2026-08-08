@@ -376,7 +376,6 @@ internal sealed class EmbeddedPackageEngine : IInstallerPackageEngine
             "NOTICE",
             "PRIVACY.md",
             "THIRD-PARTY-NOTICES.md",
-            "NSIS-LICENSE.txt",
             "DOTNET-LICENSE.txt",
             "DOTNET-THIRD-PARTY-NOTICES.txt",
             "WPF-LICENSE.txt",

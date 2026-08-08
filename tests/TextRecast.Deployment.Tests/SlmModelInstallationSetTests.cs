@@ -26,8 +26,7 @@ public sealed class SlmModelInstallationSetTests
             _ = SlmModelSetupPlanner.CreateChoices(
                 profiles,
                 hardware: null,
-                installations.FindModelCandidatesByExpectedSize().Keys,
-                profiles[0].Id);
+                installations.FindModelCandidatesByExpectedSize().Keys);
 
             Assert.IsEmpty(handler.RequestUris);
         }

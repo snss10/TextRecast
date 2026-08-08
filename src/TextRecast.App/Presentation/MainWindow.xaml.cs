@@ -146,13 +146,19 @@ public partial class MainWindow : Window
         _resultWindow = new ResultWindow(
             displayText,
             selection,
-            _formatTextWorkflow.ApplyAsync,
-            _formatTextWorkflow.RetryReplacementAsync)
+            _activeModelProfile.DisplayName,
+            _formatTextWorkflow.GenerateAsync,
+            _formatTextWorkflow.ReplaceAsync)
         {
-            Owner = this,
-            Left = Math.Min(Left + Width + 10, SystemParameters.WorkArea.Right - 450),
-            Top = Math.Min(Top, SystemParameters.WorkArea.Bottom - 346)
+            Owner = this
         };
+
+        _resultWindow.Left = Math.Min(
+            Left + Width + 10,
+            SystemParameters.WorkArea.Right - _resultWindow.Width - 8);
+        _resultWindow.Top = Math.Min(
+            Top,
+            SystemParameters.WorkArea.Bottom - _resultWindow.Height - 8);
 
         _resultWindow.Left = Math.Max(SystemParameters.WorkArea.Left + 8, _resultWindow.Left);
         _resultWindow.Top = Math.Max(SystemParameters.WorkArea.Top + 8, _resultWindow.Top);

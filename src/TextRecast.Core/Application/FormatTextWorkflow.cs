@@ -25,7 +25,7 @@ public sealed class FormatTextWorkflow
     public Task<SelectionCaptureResult> CaptureAsync(IntPtr targetWindow) =>
         _selectionCapture.CaptureSelectedTextAsync(targetWindow);
 
-    public async Task<FormatTextOutcome> ApplyAsync(
+    public async Task<FormatTextOutcome> GenerateAsync(
         SelectionContext selection,
         FormatOperation operation,
         ToneStyle? tone,
@@ -34,7 +34,7 @@ public sealed class FormatTextWorkflow
     {
         if (operation == FormatOperation.ChangeTone && tone is null)
         {
-            return new FormatTextOutcome(false, string.Empty, "Choose a tone before applying.");
+            return new FormatTextOutcome(false, string.Empty, "Choose a tone before generating.");
         }
 
         progress?.Report(FormatTextStage.Formatting);
@@ -60,13 +60,10 @@ public sealed class FormatTextWorkflow
                 $"The generated text exceeds the {SafetyMaxReplacementCharacters:N0}-character replacement safety ceiling.");
         }
 
-        cancellationToken.ThrowIfCancellationRequested();
-        progress?.Report(FormatTextStage.Replacing);
-        var replacement = await _replacement.ReplaceAsync(selection, generatedText, cancellationToken);
-        return new FormatTextOutcome(replacement.Success, generatedText, replacement.Message, replacement.Warning);
+        return new FormatTextOutcome(true, generatedText, "Generated locally.");
     }
 
-    public Task<TextReplacementResult> RetryReplacementAsync(
+    public Task<TextReplacementResult> ReplaceAsync(
         SelectionContext selection,
         string generatedText,
         CancellationToken cancellationToken)

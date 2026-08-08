@@ -111,7 +111,6 @@ jobs:
             "NOTICE",
             "PRIVACY.md",
             "THIRD-PARTY-NOTICES.md",
-            "NSIS-LICENSE.txt",
             "DOTNET-LICENSE.txt",
             "DOTNET-THIRD-PARTY-NOTICES.txt",
             "WPF-LICENSE.txt"
@@ -120,6 +119,10 @@ jobs:
             if (-not (Test-Path -LiteralPath (Join-Path $publishDirectory $file) -PathType Leaf)) {
               throw "Published application is missing required file: $file"
             }
+          }
+
+          if (Test-Path -LiteralPath (Join-Path $publishDirectory "NSIS-LICENSE.txt") -PathType Leaf) {
+            throw "The standalone NSIS notice is redundant; NSIS terms must remain consolidated in THIRD-PARTY-NOTICES.md."
           }
 
           $excludedPayloads = @(
