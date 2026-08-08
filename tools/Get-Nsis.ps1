@@ -37,7 +37,13 @@ if (-not (Test-Path -LiteralPath $archivePath -PathType Leaf)) {
         try {
             Invoke-WebRequest -Uri $currentUri -OutFile $candidatePath
 
-            $signature = Get-Content -LiteralPath $candidatePath -Encoding Byte -TotalCount 4
+            if ($PSVersionTable.PSVersion.Major -ge 7) {
+                $signature = Get-Content -LiteralPath $candidatePath -AsByteStream -TotalCount 4
+            }
+            else {
+                $signature = Get-Content -LiteralPath $candidatePath -Encoding Byte -TotalCount 4
+            }
+
             if ($signature.Length -eq 4 -and
                 $signature[0] -eq 0x50 -and
                 $signature[1] -eq 0x4B) {
