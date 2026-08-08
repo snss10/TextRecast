@@ -47,6 +47,13 @@ The self-contained Windows release includes Microsoft .NET runtime and Windows D
 - `DOTNET-THIRD-PARTY-NOTICES.txt`
 - `WPF-LICENSE.txt`
 
+## Windows installer engine
+
+The model-free Windows setup executable is built with NSIS 3.12. The NSIS
+installer code and zlib compression module used by TextRecast are available
+under the zlib/libpng license. The applicable copyright and license notice is
+distributed as `NSIS-LICENSE.txt`.
+
 ## Lucide icon artwork
 
 `MahApps.Metro.IconPacks.Lucide` incorporates icon data from the [Lucide project](https://github.com/lucide-icons/lucide). Lucide is licensed under the ISC License, and the Lucide icons derived from Feather retain the Feather MIT notice below.

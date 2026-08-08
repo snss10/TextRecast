@@ -2,7 +2,7 @@ using System.IO;
 using System.Text.Json;
 using TextRecast.Infrastructure.SLM;
 
-namespace TextRecast.Infrastructure.Tests;
+namespace TextRecast.Deployment.Tests;
 
 [TestClass]
 public sealed class ModelSelectionSettingsStoreTests

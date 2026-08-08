@@ -1,6 +1,6 @@
 using TextRecast.Infrastructure.SLM;
 
-namespace TextRecast.Infrastructure.Tests;
+namespace TextRecast.Deployment.Tests;
 
 [TestClass]
 public sealed class SlmModelCatalogTests
@@ -15,7 +15,7 @@ public sealed class SlmModelCatalogTests
         Assert.AreEqual(SlmModelRole.Fast, profile.Role);
         Assert.AreEqual("English", profile.LanguageSupport);
         Assert.IsFalse(profile.IsExperimental);
-        Assert.AreEqual(Qwen25ModelAdapter.AdapterId, profile.AdapterId);
+        Assert.AreEqual(SlmRuntimeProfileIds.Qwen25AdapterId, profile.AdapterId);
         Assert.AreEqual("qwen2.5-1.5b-instruct-q4_k_m.gguf", profile.FileName);
         Assert.AreEqual(
             "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/dd26da440ef0330c47919d1ecae0966d24022222/qwen2.5-1.5b-instruct-q4_k_m.gguf?download=true",
@@ -44,9 +44,13 @@ public sealed class SlmModelCatalogTests
         Assert.IsTrue(profile.IsExperimental);
         Assert.AreEqual("English", profile.LanguageSupport);
         StringAssert.Contains(profile.LimitationNotice, "Summaries");
-        Assert.AreEqual(Qwen35ModelAdapter.AdapterId, profile.AdapterId);
-        Assert.AreEqual(Qwen35ModelAdapter.BalancedPromptProfileId, profile.PromptProfileId);
-        Assert.AreEqual(Qwen35ModelAdapter.DefaultSamplingProfileId, profile.SamplingProfileId);
+        Assert.AreEqual(SlmRuntimeProfileIds.Qwen35AdapterId, profile.AdapterId);
+        Assert.AreEqual(
+            SlmRuntimeProfileIds.Qwen35BalancedPromptProfileId,
+            profile.PromptProfileId);
+        Assert.AreEqual(
+            SlmRuntimeProfileIds.Qwen35SamplingProfileId,
+            profile.SamplingProfileId);
         Assert.AreEqual("Qwen3.5-2B-Q5_K_M.gguf", profile.FileName);
         Assert.AreEqual(1435238656L, profile.ExpectedFileSize);
         Assert.AreEqual(
@@ -70,7 +74,9 @@ public sealed class SlmModelCatalogTests
         Assert.AreEqual(SlmModelRole.Quality, profile.Role);
         Assert.IsTrue(profile.IsExperimental);
         StringAssert.Contains(profile.LimitationNotice, "deadline wording");
-        Assert.AreEqual(Qwen35ModelAdapter.QualityPromptProfileId, profile.PromptProfileId);
+        Assert.AreEqual(
+            SlmRuntimeProfileIds.Qwen35QualityPromptProfileId,
+            profile.PromptProfileId);
         Assert.AreEqual("Qwen3.5-4B-Q5_K_M.gguf", profile.FileName);
         Assert.AreEqual(3143656608L, profile.ExpectedFileSize);
         Assert.AreEqual(
@@ -93,9 +99,13 @@ public sealed class SlmModelCatalogTests
         Assert.AreEqual(SlmModelRole.Alternative, profile.Role);
         Assert.IsTrue(profile.IsExperimental);
         StringAssert.Contains(profile.LimitationNotice, "semantic drift");
-        Assert.AreEqual(Granite41ModelAdapter.AdapterId, profile.AdapterId);
-        Assert.AreEqual(Granite41ModelAdapter.BalancedPromptProfileId, profile.PromptProfileId);
-        Assert.AreEqual(Granite41ModelAdapter.GreedySamplingProfileId, profile.SamplingProfileId);
+        Assert.AreEqual(SlmRuntimeProfileIds.Granite41AdapterId, profile.AdapterId);
+        Assert.AreEqual(
+            SlmRuntimeProfileIds.Granite41BalancedPromptProfileId,
+            profile.PromptProfileId);
+        Assert.AreEqual(
+            SlmRuntimeProfileIds.GreedySamplingProfileId,
+            profile.SamplingProfileId);
         Assert.AreEqual("granite-4.1-3b-Q5_K_M.gguf", profile.FileName);
         Assert.AreEqual(2437012064L, profile.ExpectedFileSize);
         Assert.AreEqual(

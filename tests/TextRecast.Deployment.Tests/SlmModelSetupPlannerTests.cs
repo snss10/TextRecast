@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 using TextRecast.Infrastructure.Hardware;
 using TextRecast.Infrastructure.SLM;
 
-namespace TextRecast.Infrastructure.Tests;
+namespace TextRecast.Deployment.Tests;
 
 [TestClass]
 public sealed class SlmModelSetupPlannerTests

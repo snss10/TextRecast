@@ -41,8 +41,8 @@ TextRecast uses HTTP Range and If-Range to resume compatible partial downloads. 
 
 ## Offline or portable builds
 
-Place only exact cataloged GGUF files in this directory before publishing. The App project links `Models/*.gguf` into its output, and setup marks matching files as installed. Do not rename a model file or substitute another quantization without adding and testing a separate catalog profile.
+Place only exact cataloged GGUF files in this directory before an intentional offline publish. Model inclusion is disabled by default so normal builds and installers cannot accidentally carry a local model. Pass `-p:IncludeBundledModels=true` when publishing an offline build; setup then recognizes an exact catalog match as installed. Do not rename a model file or substitute another quantization without adding and testing a separate catalog profile.
 
 The normal GitHub Actions release intentionally fails if a GGUF file enters the self-contained ZIP. This keeps the public application download small and leaves the model choice with the user.
 
-Catalog metadata is defined in [`SlmModelCatalog.cs`](../src/TextRecast.Infrastructure/SLM/SlmModelCatalog.cs).
+Catalog metadata is defined in [`SlmModelCatalog.cs`](../src/TextRecast.Deployment/SLM/SlmModelCatalog.cs).

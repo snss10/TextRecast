@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 using TextRecast.Infrastructure.Hardware;
 using TextRecast.Infrastructure.SLM;
 
-namespace TextRecast.Infrastructure.Tests;
+namespace TextRecast.Deployment.Tests;
 
 [TestClass]
 public sealed class SlmModelRecommenderTests
@@ -244,7 +244,7 @@ public sealed class SlmModelRecommenderTests
             LanguageSupport = "English",
             LimitationNotice = "Test limitation.",
             IsExperimental = false,
-            AdapterId = Qwen25ModelAdapter.AdapterId,
+            AdapterId = SlmRuntimeProfileIds.Qwen25AdapterId,
             PromptProfileId = "test-prompt-v1",
             SamplingProfileId = "greedy-v1",
             FileName = id + ".gguf",

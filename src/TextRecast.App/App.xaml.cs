@@ -5,6 +5,7 @@ using System.Security.Principal;
 using System.Windows;
 using TextRecast.App.Presentation;
 using TextRecast.Core.Application;
+using TextRecast.Deployment.Setup;
 using TextRecast.Infrastructure.Hardware;
 using TextRecast.Infrastructure.SLM;
 using TextRecast.Infrastructure.Windows.Replacement;
@@ -18,6 +19,7 @@ namespace TextRecast.App;
     Justification = "WPF owns the application lifecycle; OnExit releases process-lifetime resources.")]
 public partial class App : global::System.Windows.Application
 {
+    private const string VerifyInstallationArgument = "--verify-installation";
     private const string SingleInstanceNamePrefix = @"Local\TextRecast-";
     private LocalSlmTextFormatter? _formatter;
     private HttpClient? _modelDownloadClient;
@@ -29,6 +31,12 @@ public partial class App : global::System.Windows.Application
         base.OnStartup(e);
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
+        if (e.Args.Contains(VerifyInstallationArgument, StringComparer.OrdinalIgnoreCase))
+        {
+            Shutdown(VerifyInstallation());
+            return;
+        }
+
         if (!TryAcquireSingleInstance())
         {
             Shutdown();
@@ -36,6 +44,42 @@ public partial class App : global::System.Windows.Application
         }
 
         _ = StartAsync();
+    }
+
+    private static int VerifyInstallation()
+    {
+        var requiredFiles = new[]
+        {
+            "LICENSE",
+            "NOTICE",
+            "PRIVACY.md",
+            "THIRD-PARTY-NOTICES.md",
+            "NSIS-LICENSE.txt",
+            "DOTNET-LICENSE.txt",
+            "DOTNET-THIRD-PARTY-NOTICES.txt",
+            "WPF-LICENSE.txt"
+        };
+
+        if (requiredFiles.Any(file =>
+                !File.Exists(Path.Combine(AppContext.BaseDirectory, file))))
+        {
+            return 1;
+        }
+
+        var excludedPayloadPatterns = new[]
+        {
+            "*.gguf",
+            "*.partial",
+            "*.partial.metadata.json"
+        };
+
+        return excludedPayloadPatterns.Any(pattern =>
+            Directory.EnumerateFiles(
+                AppContext.BaseDirectory,
+                pattern,
+                SearchOption.AllDirectories).Any())
+            ? 1
+            : 0;
     }
 
     private async Task StartAsync()
@@ -55,12 +99,27 @@ public partial class App : global::System.Windows.Application
                 _modelDownloadClient,
                 packagedModelDirectory,
                 userModelDirectory);
-            var installedPaths = installations.FindInstalledModels();
-
             var settingsStore = new ModelSelectionSettingsStore(profiles.Select(profile => profile.Id));
-            var settings = await settingsStore.LoadAsync();
-            var choices = CreateModelChoices(profiles, installedPaths.Keys, userModelDirectory);
-            var selectedChoice = settings.ActiveModelId is string activeModelId
+            var setupStateStore = new ModelSetupStateStore(profiles);
+            var migrationResult = await new V02ModelSetupStateMigrator(
+                    setupStateStore,
+                    settingsStore,
+                    installations,
+                    profiles)
+                .LoadOrMigrateWithResultAsync();
+            var setupState = migrationResult.State;
+            var candidatePaths = installations.FindModelCandidatesByExpectedSize();
+            var activeModelId = setupState.ActiveModel?.ModelId;
+            var activeModelPath = migrationResult.VerifiedLegacyModelPath;
+            if (activeModelId is not null && activeModelPath is null)
+            {
+                activeModelPath = await installations
+                    .GetInstaller(activeModelId)
+                    .FindVerifiedInstalledModelAsync();
+            }
+
+            var choices = CreateModelChoices(profiles, candidatePaths.Keys, userModelDirectory);
+            var selectedChoice = activeModelId is not null && activeModelPath is not null
                 ? choices.FirstOrDefault(choice =>
                     choice.IsCompatible &&
                     choice.IsInstalled &&
@@ -72,14 +131,16 @@ public partial class App : global::System.Windows.Application
             if (selectedChoice is not null)
             {
                 modelProfile = selectedChoice.Profile;
-                modelPath = installedPaths[modelProfile.Id];
+                modelPath = activeModelPath!;
             }
             else
             {
                 var initialModelId = choices.Any(choice =>
                     choice.IsCompatible &&
-                    choice.Profile.Id.Equals(settings.ActiveModelId, StringComparison.Ordinal))
-                    ? settings.ActiveModelId!
+                    choice.Profile.Id.Equals(
+                        setupState.ActiveModel?.ModelId,
+                        StringComparison.Ordinal))
+                    ? setupState.ActiveModel!.ModelId
                     : SlmModelCatalog.Default.Id;
                 var selectionWindow = new ModelSelectionWindow(choices, initialModelId);
                 if (selectionWindow.ShowDialog() != true || selectionWindow.SelectedProfile is null)
@@ -90,7 +151,9 @@ public partial class App : global::System.Windows.Application
 
                 modelProfile = selectionWindow.SelectedProfile;
                 var modelInstaller = installations.GetInstaller(modelProfile.Id);
-                modelPath = modelInstaller.FindInstalledModel() ?? string.Empty;
+                modelPath = modelProfile.Id.Equals(activeModelId, StringComparison.Ordinal)
+                    ? activeModelPath ?? string.Empty
+                    : await modelInstaller.FindVerifiedInstalledModelAsync() ?? string.Empty;
                 if (string.IsNullOrWhiteSpace(modelPath))
                 {
                     var downloadWindow = new ModelDownloadWindow(modelInstaller, modelProfile);
@@ -104,6 +167,11 @@ public partial class App : global::System.Windows.Application
                     modelPath = downloadWindow.InstalledModelPath;
                 }
 
+                setupState = setupState.ActivateVerifiedModel(
+                    modelProfile,
+                    DateTimeOffset.UtcNow);
+                await setupStateStore.SaveAsync(setupState);
+
                 await settingsStore.SaveAsync(new ModelSelectionSettings
                 {
                     Mode = ModelSelectionMode.Manual,
@@ -116,6 +184,7 @@ public partial class App : global::System.Windows.Application
         catch (Exception exception) when (exception is
             HardwareInspectionException or
             IOException or
+            InvalidDataException or
             UnauthorizedAccessException or
             InvalidOperationException or
             ArgumentException)

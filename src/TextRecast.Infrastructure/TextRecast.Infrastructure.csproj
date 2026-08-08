@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\TextRecast.Core\TextRecast.Core.csproj" />
+    <ProjectReference Include="..\TextRecast.Deployment\TextRecast.Deployment.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -49,7 +49,7 @@ public sealed class SlmModelInstaller
 
     public string PartialMetadataPath => $"{PartialModelPath}.metadata.json";
 
-    public string? FindInstalledModel()
+    internal string? FindCandidateModelByExpectedSize()
     {
         if (HasExpectedSize(PackagedModelPath))
         {
@@ -57,6 +57,21 @@ public sealed class SlmModelInstaller
         }
 
         return HasExpectedSize(UserModelPath) ? UserModelPath : null;
+    }
+
+    public async Task<string?> FindVerifiedInstalledModelAsync(
+        CancellationToken cancellationToken = default)
+    {
+        if (HasExpectedSize(PackagedModelPath) &&
+            await HasExpectedHashAsync(PackagedModelPath, cancellationToken).ConfigureAwait(false))
+        {
+            return PackagedModelPath;
+        }
+
+        return HasExpectedSize(UserModelPath) &&
+            await HasExpectedHashAsync(UserModelPath, cancellationToken).ConfigureAwait(false)
+                ? UserModelPath
+                : null;
     }
 
     public async Task<string> DownloadAsync(
@@ -490,6 +505,17 @@ public sealed class SlmModelInstaller
 
     private async Task VerifyHashAsync(string path, CancellationToken cancellationToken)
     {
+        if (!await HasExpectedHashAsync(path, cancellationToken).ConfigureAwait(false))
+        {
+            throw new InvalidDataException(
+                "The downloaded model failed its integrity check. Please try again.");
+        }
+    }
+
+    private async Task<bool> HasExpectedHashAsync(
+        string path,
+        CancellationToken cancellationToken)
+    {
         await using var stream = new FileStream(
             path,
             FileMode.Open,
@@ -500,11 +526,8 @@ public sealed class SlmModelInstaller
         var hash = await SHA256
             .HashDataAsync(stream, cancellationToken)
             .ConfigureAwait(false);
-        if (!Convert.ToHexStringLower(hash).Equals(_profile.ExpectedSha256, StringComparison.Ordinal))
-        {
-            throw new InvalidDataException(
-                "The downloaded model failed its integrity check. Please try again.");
-        }
+        return Convert.ToHexStringLower(hash)
+            .Equals(_profile.ExpectedSha256, StringComparison.Ordinal);
     }
 
     private void ResetPartialDownload()

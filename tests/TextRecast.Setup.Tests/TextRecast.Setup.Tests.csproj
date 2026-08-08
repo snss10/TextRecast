@@ -3,15 +3,13 @@
     <TargetFramework>net10.0-windows</TargetFramework>
     <IsTestProject>true</IsTestProject>
     <IsPackable>false</IsPackable>
-    <RootNamespace>TextRecast.Infrastructure.Tests</RootNamespace>
+    <RootNamespace>TextRecast.Setup.Tests</RootNamespace>
     <UseWPF>true</UseWPF>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\TextRecast.Core\TextRecast.Core.csproj" />
     <ProjectReference Include="..\..\src\TextRecast.Deployment\TextRecast.Deployment.csproj" />
-    <ProjectReference Include="..\..\src\TextRecast.Infrastructure\TextRecast.Infrastructure.csproj" />
-    <ProjectReference Include="..\..\tools\TextRecast.ModelBenchmarks\TextRecast.ModelBenchmarks.csproj" />
+    <ProjectReference Include="..\..\src\TextRecast.Setup\TextRecast.Setup.csproj" />
   </ItemGroup>
 
   <ItemGroup>

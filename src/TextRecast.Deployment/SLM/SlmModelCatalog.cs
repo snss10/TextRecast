@@ -18,9 +18,9 @@ public static class SlmModelCatalog
         LimitationNotice =
             "Fast local model. It can miss context or change details, so review every replacement in the source application.",
         IsExperimental = false,
-        AdapterId = Qwen25ModelAdapter.AdapterId,
-        PromptProfileId = "qwen2.5-production-v1",
-        SamplingProfileId = "greedy-v1",
+        AdapterId = SlmRuntimeProfileIds.Qwen25AdapterId,
+        PromptProfileId = SlmRuntimeProfileIds.Qwen25PromptProfileId,
+        SamplingProfileId = SlmRuntimeProfileIds.GreedySamplingProfileId,
         FileName = DefaultFileName,
         DownloadUri = new Uri(
             $"https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/{DefaultRevision}/{DefaultFileName}?download=true"),
@@ -43,9 +43,9 @@ public static class SlmModelCatalog
         LimitationNotice =
             "Experimental. Summaries may add structure or unsupported actions; review names, facts, and deadlines after every replacement.",
         IsExperimental = true,
-        AdapterId = Qwen35ModelAdapter.AdapterId,
-        PromptProfileId = Qwen35ModelAdapter.BalancedPromptProfileId,
-        SamplingProfileId = Qwen35ModelAdapter.DefaultSamplingProfileId,
+        AdapterId = SlmRuntimeProfileIds.Qwen35AdapterId,
+        PromptProfileId = SlmRuntimeProfileIds.Qwen35BalancedPromptProfileId,
+        SamplingProfileId = SlmRuntimeProfileIds.Qwen35SamplingProfileId,
         FileName = "Qwen3.5-2B-Q5_K_M.gguf",
         DownloadUri = new Uri(
             $"https://huggingface.co/unsloth/Qwen3.5-2B-GGUF/resolve/{Qwen35BalancedRevision}/Qwen3.5-2B-Q5_K_M.gguf?download=true"),
@@ -75,9 +75,9 @@ public static class SlmModelCatalog
         LimitationNotice =
             "Experimental. It may occasionally assign unsupported roles or titles or alter deadline wording; carefully review every result.",
         IsExperimental = true,
-        AdapterId = Qwen35ModelAdapter.AdapterId,
-        PromptProfileId = Qwen35ModelAdapter.QualityPromptProfileId,
-        SamplingProfileId = Qwen35ModelAdapter.DefaultSamplingProfileId,
+        AdapterId = SlmRuntimeProfileIds.Qwen35AdapterId,
+        PromptProfileId = SlmRuntimeProfileIds.Qwen35QualityPromptProfileId,
+        SamplingProfileId = SlmRuntimeProfileIds.Qwen35SamplingProfileId,
         FileName = "Qwen3.5-4B-Q5_K_M.gguf",
         DownloadUri = new Uri(
             $"https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/{Qwen35QualityRevision}/Qwen3.5-4B-Q5_K_M.gguf?download=true"),
@@ -107,9 +107,9 @@ public static class SlmModelCatalog
         LimitationNotice =
             "Experimental. This model showed more semantic drift, especially in summaries and conditions; verify meaning, status, actors, and deadlines carefully.",
         IsExperimental = true,
-        AdapterId = Granite41ModelAdapter.AdapterId,
-        PromptProfileId = Granite41ModelAdapter.BalancedPromptProfileId,
-        SamplingProfileId = Granite41ModelAdapter.GreedySamplingProfileId,
+        AdapterId = SlmRuntimeProfileIds.Granite41AdapterId,
+        PromptProfileId = SlmRuntimeProfileIds.Granite41BalancedPromptProfileId,
+        SamplingProfileId = SlmRuntimeProfileIds.GreedySamplingProfileId,
         FileName = "granite-4.1-3b-Q5_K_M.gguf",
         DownloadUri = new Uri(
             $"https://huggingface.co/ibm-granite/granite-4.1-3b-GGUF/resolve/{Granite41AlternativeRevision}/granite-4.1-3b-Q5_K_M.gguf?download=true"),

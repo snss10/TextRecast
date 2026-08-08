@@ -13,12 +13,14 @@
     <SelfContained>true</SelfContained>
     <PlatformTarget>x64</PlatformTarget>
     <UseWPF>true</UseWPF>
+    <IncludeBundledModels Condition="'$(IncludeBundledModels)' == ''">false</IncludeBundledModels>
     <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>
     <DebugSymbols Condition="'$(Configuration)' == 'Release'">false</DebugSymbols>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\TextRecast.Core\TextRecast.Core.csproj" />
+    <ProjectReference Include="..\TextRecast.Deployment\TextRecast.Deployment.csproj" />
     <ProjectReference Include="..\TextRecast.Infrastructure\TextRecast.Infrastructure.csproj" />
   </ItemGroup>
 
@@ -33,6 +35,7 @@
 
   <ItemGroup>
     <Content Include="..\..\Models\*.gguf"
+             Condition="'$(IncludeBundledModels)' == 'true'"
              Link="Models\%(Filename)%(Extension)"
              CopyToOutputDirectory="PreserveNewest"
              CopyToPublishDirectory="PreserveNewest" />
@@ -41,8 +44,12 @@
   <ItemGroup>
     <None Include="..\..\LICENSE" Link="LICENSE" CopyToPublishDirectory="PreserveNewest" />
     <None Include="..\..\NOTICE" Link="NOTICE" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\..\PRIVACY.md" Link="PRIVACY.md" CopyToPublishDirectory="PreserveNewest" />
     <None Include="..\..\THIRD-PARTY-NOTICES.md"
           Link="THIRD-PARTY-NOTICES.md"
+          CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\..\NSIS-LICENSE.txt"
+          Link="NSIS-LICENSE.txt"
           CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 

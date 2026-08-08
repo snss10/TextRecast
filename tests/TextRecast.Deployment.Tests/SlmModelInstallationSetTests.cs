@@ -4,7 +4,7 @@ using System.Net.Http;
 using System.Security.Cryptography;
 using TextRecast.Infrastructure.SLM;
 
-namespace TextRecast.Infrastructure.Tests;
+namespace TextRecast.Deployment.Tests;
 
 [TestClass]
 public sealed class SlmModelInstallationSetTests
@@ -13,7 +13,7 @@ public sealed class SlmModelInstallationSetTests
     private static readonly byte[] QualityModelBytes = [5, 6, 7, 8, 9];
 
     [TestMethod]
-    public void ReviewingChoicesAndDiscoveringModelsSendsNoHttpRequests()
+    public void ReviewingChoicesAndDiscoveringCandidatesSendsNoHttpRequests()
     {
         var testRoot = CreateTestDirectory();
         try
@@ -26,7 +26,7 @@ public sealed class SlmModelInstallationSetTests
             _ = SlmModelSetupPlanner.CreateChoices(
                 profiles,
                 hardware: null,
-                installations.FindInstalledModels().Keys,
+                installations.FindModelCandidatesByExpectedSize().Keys,
                 profiles[0].Id);
 
             Assert.IsEmpty(handler.RequestUris);
@@ -70,7 +70,7 @@ public sealed class SlmModelInstallationSetTests
     }
 
     [TestMethod]
-    public void InstalledSelectionIsDiscoveredWithoutNetworkAccess()
+    public async Task InstalledSelectionIsDiscoveredWithoutNetworkAccess()
     {
         var testRoot = CreateTestDirectory();
         try
@@ -83,7 +83,7 @@ public sealed class SlmModelInstallationSetTests
             using var client = new HttpClient(handler);
             var installations = CreateInstallationSet(profiles, client, testRoot);
 
-            var installed = installations.FindInstalledModels();
+            var installed = await installations.FindVerifiedInstalledModelsAsync();
 
             Assert.HasCount(1, installed);
             Assert.IsTrue(installed.ContainsKey(profiles[0].Id));
@@ -140,7 +140,7 @@ public sealed class SlmModelInstallationSetTests
         LanguageSupport = "English",
         LimitationNotice = "Review test output.",
         IsExperimental = true,
-        AdapterId = Qwen25ModelAdapter.AdapterId,
+        AdapterId = SlmRuntimeProfileIds.Qwen25AdapterId,
         PromptProfileId = "test-prompt-v1",
         SamplingProfileId = "greedy-v1",
         FileName = $"{id}.gguf",

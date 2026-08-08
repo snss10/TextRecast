@@ -2,7 +2,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using TextRecast.Infrastructure.Hardware;
 
-namespace TextRecast.Infrastructure.Tests;
+namespace TextRecast.Deployment.Tests;
 
 [TestClass]
 public sealed class HardwareInspectorTests

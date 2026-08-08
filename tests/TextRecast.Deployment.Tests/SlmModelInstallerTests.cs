@@ -5,7 +5,7 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using TextRecast.Infrastructure.SLM;
 
-namespace TextRecast.Infrastructure.Tests;
+namespace TextRecast.Deployment.Tests;
 
 [TestClass]
 public sealed class SlmModelInstallerTests
@@ -15,7 +15,7 @@ public sealed class SlmModelInstallerTests
     private const string Version2EntityTag = "\"version-2\"";
 
     [TestMethod]
-    public void FindInstalledModelUsesInjectedStorageDirectories()
+    public void FindCandidateModelByExpectedSizeUsesInjectedStorageDirectories()
     {
         var modelBytes = CreateModelBytes();
         var testRoot = CreateTestDirectory();
@@ -35,9 +35,40 @@ public sealed class SlmModelInstallerTests
                 packagedDirectory,
                 userDirectory);
 
-            var installedPath = installer.FindInstalledModel();
+            var installedPath = installer.FindCandidateModelByExpectedSize();
 
             Assert.AreEqual(installer.PackagedModelPath, installedPath);
+        }
+        finally
+        {
+            Directory.Delete(testRoot, recursive: true);
+        }
+    }
+
+    [TestMethod]
+    public async Task FindVerifiedInstalledModelAsyncRejectsSameSizeWrongHash()
+    {
+        var modelBytes = CreateModelBytes();
+        var testRoot = CreateTestDirectory();
+        try
+        {
+            var userDirectory = Path.Combine(testRoot, "user");
+            Directory.CreateDirectory(userDirectory);
+            var profile = CreateProfile(modelBytes);
+            File.WriteAllBytes(
+                Path.Combine(userDirectory, profile.FileName),
+                modelBytes.Select(value => (byte)(value + 1)).ToArray());
+            using var client = new HttpClient(new RecordingHttpMessageHandler());
+            var installer = new SlmModelInstaller(
+                profile,
+                client,
+                Path.Combine(testRoot, "packaged"),
+                userDirectory);
+
+            var installedPath = await installer.FindVerifiedInstalledModelAsync();
+
+            Assert.IsNull(installedPath);
+            Assert.IsTrue(File.Exists(installer.UserModelPath));
         }
         finally
         {
@@ -566,7 +597,7 @@ public sealed class SlmModelInstallerTests
             LanguageSupport = "English",
             LimitationNotice = "Test limitation.",
             IsExperimental = false,
-            AdapterId = Qwen25ModelAdapter.AdapterId,
+            AdapterId = SlmRuntimeProfileIds.Qwen25AdapterId,
             PromptProfileId = "test-prompt-v1",
             SamplingProfileId = "greedy-v1",
             FileName = "test-model.gguf",

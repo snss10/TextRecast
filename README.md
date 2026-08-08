@@ -116,6 +116,8 @@ Drag the floating icon to reposition it. Right-click it to view the active model
 
 ## Privacy and safeguards
 
+The complete data-handling statement is available in the [TextRecast Privacy Notice](PRIVACY.md).
+
 - TextRecast itself does not write selected or generated text to logs or files.
 - Formatting runs on the local CPU and does not use a text-processing API.
 - TextRecast does not maintain a formatting history.
@@ -202,7 +204,7 @@ dotnet run --project src/TextRecast.App/TextRecast.App.csproj
 dotnet publish src/TextRecast.App/TextRecast.App.csproj -c Release -r win-x64 --self-contained true -o artifacts/TextRecast-win-x64
 ```
 
-Distribute the complete output folder, not only the executable. Any cataloged GGUF files documented in [Models/README.md](Models/README.md) are packaged when placed in the repository's `Models` directory before publishing. Normal release packages intentionally contain no model; the user chooses and confirms one during setup.
+Distribute the complete output folder, not only the executable. Normal publishes intentionally contain no model; the user chooses and confirms one during setup. An offline build can explicitly include an exact cataloged GGUF file with `-p:IncludeBundledModels=true`; see [Models/README.md](Models/README.md).
 
 For tagged releases, GitHub Actions creates a model-free `TextRecast-vX.Y.Z-win-x64.zip` containing the complete runtime, TextRecast legal files, and the legal files supplied with the bundled .NET runtime packs, plus a matching SHA-256 file. A release tag must use `vMAJOR.MINOR.PATCH` and match the version in `Directory.Build.props`.
 
@@ -210,30 +212,32 @@ For tagged releases, GitHub Actions creates a model-free `TextRecast-vX.Y.Z-win-
 
 - [TextRecast.App](src/TextRecast.App/) contains the WPF presentation layer and application composition.
 - [TextRecast.Core](src/TextRecast.Core/) contains platform-independent workflows, contracts, results, and models.
-- [TextRecast.Infrastructure](src/TextRecast.Infrastructure/) contains local SLM inference and Windows integrations.
-- [tests](tests/) contains Core and Infrastructure automated tests.
+- [TextRecast.Deployment](src/TextRecast.Deployment/) contains the model catalog, verified downloads, hardware recommendations, setup state, and installer identity without inference dependencies.
+- [TextRecast.Infrastructure](src/TextRecast.Infrastructure/) contains local SLM inference and Windows capture/replacement integrations.
+- [TextRecast.Setup](src/TextRecast.Setup/) contains the self-contained managed Windows setup host.
+- [installer](installer/) contains the internal per-user application package definition.
+- [tests](tests/) contains Core, Deployment, Infrastructure, and Setup automated tests.
 - [Models](Models/) documents supported models, integrity metadata, and offline packaging.
 
 ```text
-TextRecast.App ---------> TextRecast.Core
-        |
-        +---------------> TextRecast.Infrastructure
-                                  |
-                                  +---------------> TextRecast.Core
+TextRecast.Setup -------> TextRecast.Deployment
+TextRecast.App ---------> TextRecast.Core + TextRecast.Deployment + TextRecast.Infrastructure
+TextRecast.Infrastructure -> TextRecast.Core + TextRecast.Deployment
 ```
 
-Model profiles are defined in [SlmModelCatalog.cs](src/TextRecast.Infrastructure/SLM/SlmModelCatalog.cs). A new model can reuse installation, verification, storage, inference lifecycle, chunking, and workflow components; models with a different chat format should provide a matching prompt builder.
+Model profiles are defined in [SlmModelCatalog.cs](src/TextRecast.Deployment/SLM/SlmModelCatalog.cs). A new model can reuse installation, verification, storage, inference lifecycle, chunking, and workflow components; models with a different chat format should provide a matching prompt builder. The model-free setup build and its transaction boundaries are documented in [installer/README.md](installer/README.md).
 
 ## Technology
 
 - WPF on .NET 10
+- NSIS 3.12 for the internal per-user application package
 - [LLamaSharp](https://github.com/SciSharp/LLamaSharp) with CPU inference
 - [Qwen 2.5 GGUF](https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF), [Qwen 3.5 GGUF](https://huggingface.co/unsloth/Qwen3.5-2B-GGUF), and [Granite 4.1 GGUF](https://huggingface.co/ibm-granite/granite-4.1-3b-GGUF)
 - Windows UI Automation, clipboard, and input APIs
 
 ## Security and license
 
-Report security issues using the process in [SECURITY.md](SECURITY.md).
+Report security issues using the process in [SECURITY.md](SECURITY.md). Data handling is described in [PRIVACY.md](PRIVACY.md).
 
 TextRecast source code and documentation are licensed under the [Apache License 2.0](LICENSE). Copyright 2026 snss10.
 
