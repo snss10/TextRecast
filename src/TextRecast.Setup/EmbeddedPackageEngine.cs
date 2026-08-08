@@ -19,6 +19,10 @@ internal interface IInstallerPackageEngine
 
     bool IsInstalled(string installDirectory);
 
+    string ValidateInstallDirectory(string installDirectory);
+
+    string GetInstalledApplicationPath(string installDirectory);
+
     Task<PackageOperationResult> InstallAsync(string installDirectory);
 
     Task<PackageOperationResult> UninstallAsync(string installDirectory);
@@ -161,7 +165,7 @@ internal sealed class EmbeddedPackageEngine : IInstallerPackageEngine
         return new PackageOperationResult(0, "TextRecast was removed successfully.");
     }
 
-    internal string ValidateInstallDirectory(string installDirectory)
+    public string ValidateInstallDirectory(string installDirectory)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(installDirectory);
         var fullPath = Path.GetFullPath(installDirectory)
@@ -199,6 +203,14 @@ internal sealed class EmbeddedPackageEngine : IInstallerPackageEngine
         }
 
         return fullPath;
+    }
+
+    public string GetInstalledApplicationPath(string installDirectory)
+    {
+        var validatedDirectory = ValidateInstallDirectory(installDirectory);
+        return Path.Combine(
+            GetApplicationDirectory(validatedDirectory),
+            WindowsInstallerIdentity.ExecutableName);
     }
 
     internal void EnsureInstallTargetIsOwnedOrEmpty(string installDirectory)

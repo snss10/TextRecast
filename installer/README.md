@@ -7,6 +7,24 @@ TextRecast uses a two-layer per-user Windows setup:
 
 The application publish directory is the only package input. Normal publishes disable bundled models, and the build script rejects `*.gguf`, `*.partial`, and `*.partial.metadata.json` before invoking NSIS.
 
+## Guided setup contract
+
+The managed setup host owns this seven-step journey:
+
+1. Welcome
+2. License and Privacy
+3. Destination
+4. Model Choice
+5. Ready to Install
+6. Installing, downloading, and verifying
+7. Complete
+
+Legal and privacy content is packaged locally. Setup requires acceptance and one explicit compatible model choice before Install is enabled. No model request begins before Install, and retries or resumes remain bound to that selected catalog entry. Application installation completes before model setup begins; a model becomes active only after its exact size and SHA-256 pass verification.
+
+The Install command changes the coordinator to the Installing page and yields one WPF render before starting the embedded package process. This keeps the UI responsive and makes the transition visible immediately. During installation, the shared compact footer shows only Cancel. Closing the window is guarded while package work is active.
+
+The visual baseline and screen-specific decisions are maintained in the ignored local planning file `docs/design/v0.3.0/README.md`; executable behavior is enforced by setup and deployment tests in the repository.
+
 ## Build
 
 First create the self-contained application publish, then build the setup executable:
@@ -30,6 +48,16 @@ The tool bootstrap script downloads the official NSIS 3.12 archive and accepts i
 - The setup host extracts its internal package to a unique temporary directory and removes that directory after the package process exits.
 
 The model-free setup can be exercised without UI by passing `--install --quiet` or `--uninstall --quiet`. `--install-directory <path>` is available for isolated smoke tests and is restricted to the current user's local application-data tree.
+
+Source verification uses:
+
+```powershell
+dotnet format TextRecast.slnx --verify-no-changes --no-restore
+dotnet build TextRecast.slnx -c Release --no-restore
+dotnet test TextRecast.slnx -c Release --no-build
+```
+
+The packaging smoke test installs into an isolated per-user location, verifies payload replacement and uninstall ownership, and preserves model/settings data outside the package-owned application directory.
 
 ## Licensing
 

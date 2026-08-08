@@ -1,0 +1,93 @@
+using System.Runtime.InteropServices;
+using System.Windows.Controls;
+using System.Windows.Media;
+using TextRecast.Infrastructure.Hardware;
+using TextRecast.Infrastructure.SLM;
+
+namespace TextRecast.Setup.Tests;
+
+[TestClass]
+public sealed class SetupModelCatalogPresentationTests
+{
+    [TestMethod]
+    public void InstallerShowsTheApprovedFourRowsInCatalogOrder()
+    {
+        var hardware = new HardwareProfile(
+            TotalPhysicalMemoryBytes: 32L * 1024 * 1024 * 1024,
+            AvailablePhysicalMemoryBytes: 24L * 1024 * 1024 * 1024,
+            LogicalProcessorCount: 16,
+            ProcessArchitecture: Architecture.X64,
+            SupportsAvx2: true,
+            AvailableModelStorageBytes: 100L * 1024 * 1024 * 1024,
+            ModelStorageRoot: @"C:\");
+        var planned = SlmModelSetupPlanner.CreateChoices(
+            SlmModelCatalog.All,
+            hardware,
+            installedModelIds: [],
+            SlmModelCatalog.Default.Id);
+
+        var rows = SetupModelCatalogPresentation.CreateChoices(planned);
+
+        Assert.AreEqual(4, rows.Length);
+        AssertRow(rows[0], "Qwen 2.5 1.5B", "Fast/default", "1.04 GiB");
+        AssertRow(rows[1], "Qwen 3.5 2B", "Balanced", "1.34 GiB");
+        AssertRow(rows[2], "Qwen 3.5 4B", "Best quality", "2.93 GiB");
+        AssertRow(rows[3], "Granite 4.1 3B", "Alternative", "2.27 GiB");
+        Assert.IsTrue(rows.All(row => row.IsCompatible));
+        Assert.IsTrue(rows.All(row => row.Details.Contains("Source:", StringComparison.Ordinal)));
+        Assert.IsTrue(rows.All(row => row.Details.Contains("License:", StringComparison.Ordinal)));
+    }
+
+    [TestMethod]
+    public void PresentationDoesNotExposeRemovedTechnicalColumns()
+    {
+        var properties = typeof(SetupModelChoice).GetProperties()
+            .Select(property => property.Name)
+            .ToHashSet(StringComparer.Ordinal);
+
+        Assert.IsFalse(properties.Contains("Quantization"));
+        Assert.IsFalse(properties.Contains("Experimental"));
+        Assert.IsFalse(properties.Contains("Language"));
+    }
+
+    [TestMethod]
+    public void SetupContainsOfflineLegalAndPrivacyDocuments()
+    {
+        StringAssert.Contains(SetupLegalDocuments.License, "Apache License");
+        StringAssert.Contains(SetupLegalDocuments.Privacy, "Privacy");
+        Assert.IsFalse(string.IsNullOrWhiteSpace(SetupLegalDocuments.Notice));
+        Assert.IsFalse(string.IsNullOrWhiteSpace(SetupLegalDocuments.ThirdPartyNotices));
+    }
+
+    [STATestMethod]
+    public void SetupDefinesCompleteLightAndDarkThemeResources()
+    {
+        var light = new Grid();
+        var dark = new Grid();
+
+        SetupTheme.Apply(light, dark: false);
+        SetupTheme.Apply(dark, dark: true);
+
+        Assert.AreEqual(
+            Color.FromRgb(255, 255, 255),
+            ((SolidColorBrush)light.Resources["WindowBackgroundBrush"]).Color);
+        Assert.AreEqual(
+            Color.FromRgb(23, 25, 28),
+            ((SolidColorBrush)dark.Resources["WindowBackgroundBrush"]).Color);
+        Assert.IsNotNull(light.Resources["AccentBrush"]);
+        Assert.IsNotNull(dark.Resources["ProgressBrush"]);
+        Assert.IsNotNull(dark.Resources["PrimaryTextBrush"]);
+        Assert.IsNotNull(dark.Resources["BorderBrush"]);
+    }
+
+    private static void AssertRow(
+        SetupModelChoice row,
+        string expectedName,
+        string expectedProfile,
+        string expectedSize)
+    {
+        Assert.AreEqual(expectedName, row.Name);
+        Assert.AreEqual(expectedProfile, row.Profile);
+        Assert.AreEqual(expectedSize, row.Size);
+    }
+}

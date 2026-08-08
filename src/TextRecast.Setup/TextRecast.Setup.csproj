@@ -30,9 +30,18 @@
   <ItemGroup>
     <Resource Include="..\TextRecast.App\Assets\Brand\textrecast-mark.png"
               Link="Assets\Brand\textrecast-mark.png" />
+    <Resource Include="..\TextRecast.App\Assets\Brand\textrecast-icon.png"
+              Link="Assets\Brand\textrecast-icon.png" />
+    <Resource Include="..\TextRecast.App\Assets\Brand\TextRecast.ico"
+              Link="Assets\Brand\TextRecast.ico" />
     <EmbeddedResource Include="$(EmbeddedPackagePath)"
                       Condition="'$(EmbeddedPackagePath)' != ''"
                       LogicalName="TextRecast.Package.exe" />
+    <EmbeddedResource Include="..\..\LICENSE" LogicalName="TextRecast.Legal.LICENSE" />
+    <EmbeddedResource Include="..\..\PRIVACY.md" LogicalName="TextRecast.Legal.PRIVACY.md" />
+    <EmbeddedResource Include="..\..\NOTICE" LogicalName="TextRecast.Legal.NOTICE" />
+    <EmbeddedResource Include="..\..\THIRD-PARTY-NOTICES.md"
+                      LogicalName="TextRecast.Legal.THIRD-PARTY-NOTICES.md" />
   </ItemGroup>
 
   <Target Name="ValidateEmbeddedPackage"
