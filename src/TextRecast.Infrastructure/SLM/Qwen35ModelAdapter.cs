@@ -5,10 +5,13 @@ namespace TextRecast.Infrastructure.SLM;
 
 public sealed class Qwen35ModelAdapter : ISlmModelAdapter
 {
-    public const string AdapterId = "qwen3.5-chatml";
-    public const string BalancedPromptProfileId = "qwen35-2b-balanced-v3";
-    public const string QualityPromptProfileId = "qwen35-4b-balanced-v3";
-    public const string DefaultSamplingProfileId = "qwen3.5-default-v1";
+    public const string AdapterId = SlmRuntimeProfileIds.Qwen35AdapterId;
+    public const string BalancedPromptProfileId =
+        SlmRuntimeProfileIds.Qwen35BalancedPromptProfileId;
+    public const string QualityPromptProfileId =
+        SlmRuntimeProfileIds.Qwen35QualityPromptProfileId;
+    public const string DefaultSamplingProfileId =
+        SlmRuntimeProfileIds.Qwen35SamplingProfileId;
 
     private const string BalancedSystemInstruction =
         "Carry out the task on the source. Change wording and detail only as the task calls for, while preserving real-world meaning. Do not turn facts into advice, success into failure, or suggestions into requirements. Retain actors, responsibility, causes, conditions, recurrence, negation, names, numbers, and deadline wording. Invent nothing and return only the edit. Do not explain or show reasoning.";

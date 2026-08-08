@@ -5,9 +5,11 @@ namespace TextRecast.Infrastructure.SLM;
 
 public sealed class Granite41ModelAdapter : ISlmModelAdapter
 {
-    public const string AdapterId = "granite4.1-chat";
-    public const string BalancedPromptProfileId = "granite41-3b-balanced-v3";
-    public const string GreedySamplingProfileId = "greedy-v1";
+    public const string AdapterId = SlmRuntimeProfileIds.Granite41AdapterId;
+    public const string BalancedPromptProfileId =
+        SlmRuntimeProfileIds.Granite41BalancedPromptProfileId;
+    public const string GreedySamplingProfileId =
+        SlmRuntimeProfileIds.GreedySamplingProfileId;
 
     private const string SystemInstruction =
         "Perform the task on the source rather than describing the task. Preserve factual status, actors, exact role labels, recurrence, conditions, causes, negation, names, numbers, relative-time phrases, and deadline wording. Wording may change as requested, but facts may not. Keep unknown referents general, add no rationale, and return only the revised text.";

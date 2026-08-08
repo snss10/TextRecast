@@ -5,7 +5,7 @@ using System.Security.Principal;
 using System.Windows;
 using TextRecast.App.Presentation;
 using TextRecast.Core.Application;
-using TextRecast.Infrastructure.Hardware;
+using TextRecast.Deployment.Setup;
 using TextRecast.Infrastructure.SLM;
 using TextRecast.Infrastructure.Windows.Replacement;
 using TextRecast.Infrastructure.Windows.Selection;
@@ -18,6 +18,7 @@ namespace TextRecast.App;
     Justification = "WPF owns the application lifecycle; OnExit releases process-lifetime resources.")]
 public partial class App : global::System.Windows.Application
 {
+    private const string VerifyInstallationArgument = "--verify-installation";
     private const string SingleInstanceNamePrefix = @"Local\TextRecast-";
     private LocalSlmTextFormatter? _formatter;
     private HttpClient? _modelDownloadClient;
@@ -27,7 +28,14 @@ public partial class App : global::System.Windows.Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        ApplicationTheme.Initialize();
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+        if (e.Args.Contains(VerifyInstallationArgument, StringComparer.OrdinalIgnoreCase))
+        {
+            Shutdown(VerifyInstallation());
+            return;
+        }
 
         if (!TryAcquireSingleInstance())
         {
@@ -36,6 +44,41 @@ public partial class App : global::System.Windows.Application
         }
 
         _ = StartAsync();
+    }
+
+    private static int VerifyInstallation()
+    {
+        var requiredFiles = new[]
+        {
+            "LICENSE",
+            "NOTICE",
+            "PRIVACY.md",
+            "THIRD-PARTY-NOTICES.md",
+            "DOTNET-LICENSE.txt",
+            "DOTNET-THIRD-PARTY-NOTICES.txt",
+            "WPF-LICENSE.txt"
+        };
+
+        if (requiredFiles.Any(file =>
+                !File.Exists(Path.Combine(AppContext.BaseDirectory, file))))
+        {
+            return 1;
+        }
+
+        var excludedPayloadPatterns = new[]
+        {
+            "*.gguf",
+            "*.partial",
+            "*.partial.metadata.json"
+        };
+
+        return excludedPayloadPatterns.Any(pattern =>
+            Directory.EnumerateFiles(
+                AppContext.BaseDirectory,
+                pattern,
+                SearchOption.AllDirectories).Any())
+            ? 1
+            : 0;
     }
 
     private async Task StartAsync()
@@ -55,67 +98,49 @@ public partial class App : global::System.Windows.Application
                 _modelDownloadClient,
                 packagedModelDirectory,
                 userModelDirectory);
-            var installedPaths = installations.FindInstalledModels();
-
             var settingsStore = new ModelSelectionSettingsStore(profiles.Select(profile => profile.Id));
-            var settings = await settingsStore.LoadAsync();
-            var choices = CreateModelChoices(profiles, installedPaths.Keys, userModelDirectory);
-            var selectedChoice = settings.ActiveModelId is string activeModelId
-                ? choices.FirstOrDefault(choice =>
-                    choice.IsCompatible &&
-                    choice.IsInstalled &&
-                    choice.Profile.Id.Equals(activeModelId, StringComparison.Ordinal))
-                : null;
-
-            SlmModelProfile modelProfile;
-            string modelPath;
-            if (selectedChoice is not null)
+            var setupStateStore = new ModelSetupStateStore(profiles);
+            var migrationResult = await new V02ModelSetupStateMigrator(
+                    setupStateStore,
+                    settingsStore,
+                    installations,
+                    profiles)
+                .LoadOrMigrateWithResultAsync();
+            var setupState = migrationResult.State;
+            var activeModelId = setupState.ActiveModel?.ModelId;
+            var activeModelPath = migrationResult.VerifiedLegacyModelPath;
+            if (activeModelId is not null && activeModelPath is null)
             {
-                modelProfile = selectedChoice.Profile;
-                modelPath = installedPaths[modelProfile.Id];
-            }
-            else
-            {
-                var initialModelId = choices.Any(choice =>
-                    choice.IsCompatible &&
-                    choice.Profile.Id.Equals(settings.ActiveModelId, StringComparison.Ordinal))
-                    ? settings.ActiveModelId!
-                    : SlmModelCatalog.Default.Id;
-                var selectionWindow = new ModelSelectionWindow(choices, initialModelId);
-                if (selectionWindow.ShowDialog() != true || selectionWindow.SelectedProfile is null)
-                {
-                    Shutdown();
-                    return;
-                }
-
-                modelProfile = selectionWindow.SelectedProfile;
-                var modelInstaller = installations.GetInstaller(modelProfile.Id);
-                modelPath = modelInstaller.FindInstalledModel() ?? string.Empty;
-                if (string.IsNullOrWhiteSpace(modelPath))
-                {
-                    var downloadWindow = new ModelDownloadWindow(modelInstaller, modelProfile);
-                    if (downloadWindow.ShowDialog() != true ||
-                        string.IsNullOrWhiteSpace(downloadWindow.InstalledModelPath))
-                    {
-                        Shutdown();
-                        return;
-                    }
-
-                    modelPath = downloadWindow.InstalledModelPath;
-                }
-
-                await settingsStore.SaveAsync(new ModelSelectionSettings
-                {
-                    Mode = ModelSelectionMode.Manual,
-                    ActiveModelId = modelProfile.Id
-                });
+                activeModelPath = await installations
+                    .GetInstaller(activeModelId)
+                    .FindVerifiedInstalledModelAsync();
             }
 
-            StartMainWindow(modelProfile, modelPath);
+            if (SetupRecoveryLauncher.IsRecoveryRequired(
+                    setupState,
+                    activeModelId,
+                    activeModelPath))
+            {
+                if (!SetupRecoveryLauncher.TryLaunch(out var recoveryError))
+                {
+                    MessageBox.Show(
+                        recoveryError,
+                        "Complete TextRecast setup",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                }
+
+                Shutdown();
+                return;
+            }
+
+            StartMainWindow(
+                SlmModelCatalog.GetById(activeModelId!),
+                activeModelPath!);
         }
         catch (Exception exception) when (exception is
-            HardwareInspectionException or
             IOException or
+            InvalidDataException or
             UnauthorizedAccessException or
             InvalidOperationException or
             ArgumentException)
@@ -144,35 +169,6 @@ public partial class App : global::System.Windows.Application
         MainWindow = new MainWindow(workflow, modelProfile);
         MainWindow.Show();
         ShutdownMode = ShutdownMode.OnMainWindowClose;
-    }
-
-    private static ModelSelectionChoice[] CreateModelChoices(
-        IReadOnlyList<SlmModelProfile> profiles,
-        IEnumerable<string> installedModelIds,
-        string userModelDirectory)
-    {
-        var installedIds = new HashSet<string>(installedModelIds, StringComparer.Ordinal);
-        HardwareProfile? hardware = null;
-        try
-        {
-            hardware = new HardwareInspector().Inspect(userModelDirectory);
-        }
-        catch (HardwareInspectionException)
-        {
-        }
-
-        return SlmModelSetupPlanner.CreateChoices(
-                profiles,
-                hardware,
-                installedIds,
-                SlmModelCatalog.Default.Id)
-            .Select(choice => new ModelSelectionChoice(
-                choice.Profile,
-                choice.IsCompatible,
-                choice.IsInstalled,
-                choice.IsRecommended,
-                choice.CompatibilityText))
-            .ToArray();
     }
 
     protected override void OnExit(ExitEventArgs e)

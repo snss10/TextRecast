@@ -6,6 +6,10 @@ TextRecast contains or uses the third-party components listed below. Each compon
 
 The following production dependencies declare the MIT License in their NuGet package metadata:
 
+- Direct production package references: `LLamaSharp`, `LLamaSharp.Backend.Cpu`, and `MahApps.Metro.IconPacks.Lucide`.
+- The remaining packages in the table are production transitive dependencies resolved by those packages.
+- Test-only dependencies are not included because they are not distributed with the application or installer.
+
 | Package | Version | Authors or project | License |
 | --- | --- | --- | --- |
 | CommunityToolkit.HighPerformance | 8.4.2 | Microsoft / .NET Community Toolkit | MIT |
@@ -47,9 +51,40 @@ The self-contained Windows release includes Microsoft .NET runtime and Windows D
 - `DOTNET-THIRD-PARTY-NOTICES.txt`
 - `WPF-LICENSE.txt`
 
+## Windows installer engine
+
+The model-free Windows setup executable is built with NSIS 3.12. The NSIS
+installer code and zlib compression module used by TextRecast are available
+under the zlib/libpng license. The generated installer is build output; the
+NSIS compiler and source distribution are not redistributed with TextRecast.
+
+Copyright (C) 1999-2026 Contributors
+
+This software is provided 'as-is', without any express or implied warranty.
+In no event will the authors be held liable for any damages arising from the
+use of this software.
+
+Permission is granted to anyone to use this software for any purpose,
+including commercial applications, and to alter it and redistribute it
+freely, subject to the following restrictions:
+
+1. The origin of this software must not be misrepresented; you must not claim
+   that you wrote the original software. If you use this software in a
+   product, an acknowledgment in the product documentation would be
+   appreciated but is not required.
+2. Altered source versions must be plainly marked as such, and must not be
+   misrepresented as being the original software.
+3. This notice may not be removed or altered from any source distribution.
+
+Upstream project: <https://nsis.sourceforge.io/>
+
+Upstream license: <https://github.com/kichik/nsis/blob/v3.12/COPYING>
+
 ## Lucide icon artwork
 
 `MahApps.Metro.IconPacks.Lucide` incorporates icon data from the [Lucide project](https://github.com/lucide-icons/lucide). Lucide is licensed under the ISC License, and the Lucide icons derived from Feather retain the Feather MIT notice below.
+
+TextRecast uses only the glyphs needed for launcher commands, rewrite operations, status, copy, and regeneration. The complete Lucide and Feather notices remain here because the distributed MahApps icon-pack assembly contains the broader icon data, not only the glyphs referenced by TextRecast.
 
 ### Lucide ISC License
 

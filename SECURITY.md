@@ -28,4 +28,8 @@ The application must continue to:
 - Verify the source window, process, capture age, and selection before replacement
 - Reject empty, oversized, or unsupported replacement content
 - Verify downloaded model size and SHA-256 before installation
+- Start model network requests only after explicit user selection and Install
+- Keep retries and resumed downloads bound to the selected catalog model
+- Restrict installer writes and cleanup to validated per-user, product-owned paths
+- Preserve the previous complete application payload when an upgrade activation fails
 - Run with the current user's privileges rather than requesting elevation

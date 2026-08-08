@@ -13,12 +13,14 @@
     <SelfContained>true</SelfContained>
     <PlatformTarget>x64</PlatformTarget>
     <UseWPF>true</UseWPF>
+    <IncludeBundledModels Condition="'$(IncludeBundledModels)' == ''">false</IncludeBundledModels>
     <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>
     <DebugSymbols Condition="'$(Configuration)' == 'Release'">false</DebugSymbols>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\TextRecast.Core\TextRecast.Core.csproj" />
+    <ProjectReference Include="..\TextRecast.Deployment\TextRecast.Deployment.csproj" />
     <ProjectReference Include="..\TextRecast.Infrastructure\TextRecast.Infrastructure.csproj" />
   </ItemGroup>
 
@@ -27,22 +29,26 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Resource Include="$(MSBuildProjectDirectory)\Assets\Brand\TextRecast.ico"
+              Link="Assets\Brand\TextRecast.ico" />
     <Resource Include="Assets\Brand\textrecast-icon.png" />
-    <Resource Include="Assets\Brand\textrecast-mark.png" />
   </ItemGroup>
 
   <ItemGroup>
     <Content Include="..\..\Models\*.gguf"
+             Condition="'$(IncludeBundledModels)' == 'true'"
              Link="Models\%(Filename)%(Extension)"
              CopyToOutputDirectory="PreserveNewest"
              CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\..\LICENSE" Link="LICENSE" CopyToPublishDirectory="PreserveNewest" />
-    <None Include="..\..\NOTICE" Link="NOTICE" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\..\LICENSE" Link="LICENSE" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\..\NOTICE" Link="NOTICE" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\..\PRIVACY.md" Link="PRIVACY.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="..\..\THIRD-PARTY-NOTICES.md"
           Link="THIRD-PARTY-NOTICES.md"
+          CopyToOutputDirectory="PreserveNewest"
           CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 

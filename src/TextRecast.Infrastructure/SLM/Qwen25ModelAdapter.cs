@@ -5,7 +5,7 @@ namespace TextRecast.Infrastructure.SLM;
 
 public sealed class Qwen25ModelAdapter : ISlmModelAdapter
 {
-    public const string AdapterId = "qwen2.5-chatml";
+    public const string AdapterId = SlmRuntimeProfileIds.Qwen25AdapterId;
     private static readonly IReadOnlyList<string> ChatMlStopSequences =
         Array.AsReadOnly(["<|im_end|>", "<|im_start|>"]);
 

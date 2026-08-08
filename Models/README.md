@@ -1,6 +1,6 @@
 # Supported local models
 
-TextRecast runs one cataloged GGUF model at a time. During setup, the user reviews the available choices and confirms the exact model before any download starts. Release archives do not contain model binaries.
+TextRecast runs one cataloged GGUF model at a time. During setup, the user reviews the available choices and confirms the exact model before any download starts. Normal release payloads do not contain model binaries.
 
 All current profiles are for English rewriting. The three newer choices are experimental, and every replacement should be reviewed in the source application.
 
@@ -39,10 +39,10 @@ An interrupted download uses two temporary files beside its final destination:
 
 TextRecast uses HTTP Range and If-Range to resume compatible partial downloads. It restarts when the server ignores the range, returns inconsistent metadata, or exposes a changed validator. The final file is installed only after its exact size and SHA-256 pass verification.
 
-## Offline or portable builds
+## Offline builds
 
-Place only exact cataloged GGUF files in this directory before publishing. The App project links `Models/*.gguf` into its output, and setup marks matching files as installed. Do not rename a model file or substitute another quantization without adding and testing a separate catalog profile.
+Place only exact cataloged GGUF files in this directory before an intentional offline publish. Model inclusion is disabled by default so normal builds and installers cannot accidentally carry a local model. Pass `-p:IncludeBundledModels=true` when publishing an offline installer input; setup then recognizes an exact catalog match as installed. Do not rename a model file or substitute another quantization without adding and testing a separate catalog profile.
 
-The normal GitHub Actions release intentionally fails if a GGUF file enters the self-contained ZIP. This keeps the public application download small and leaves the model choice with the user.
+The normal GitHub Actions build intentionally fails if a GGUF or partial-download file enters either the self-contained application payload or the Windows setup input. This keeps the public installer model-free and leaves the model choice with the user.
 
-Catalog metadata is defined in [`SlmModelCatalog.cs`](../src/TextRecast.Infrastructure/SLM/SlmModelCatalog.cs).
+Catalog metadata is defined in [`SlmModelCatalog.cs`](../src/TextRecast.Deployment/SLM/SlmModelCatalog.cs).

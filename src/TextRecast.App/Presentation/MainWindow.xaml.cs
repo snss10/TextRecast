@@ -29,6 +29,7 @@ public partial class MainWindow : Window
             throw new ArgumentNullException(nameof(formatTextWorkflow));
         _activeModelProfile = activeModelProfile ??
             throw new ArgumentNullException(nameof(activeModelProfile));
+        ApplicationTheme.Apply(this);
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -80,7 +81,7 @@ public partial class MainWindow : Window
         }
         else
         {
-            await FormatSelectedTextAsync();
+            await ToggleEditorAsync();
         }
     }
 
@@ -96,8 +97,22 @@ public partial class MainWindow : Window
         {
             _captureTargetWindow = NativeMethods.GetForegroundWindowHandle();
             e.Handled = true;
-            await FormatSelectedTextAsync();
+            await ToggleEditorAsync();
         }
+    }
+
+    internal bool IsEditorVisible => _resultWindow?.IsVisible == true;
+
+    internal async Task ToggleEditorAsync()
+    {
+        if (IsEditorVisible)
+        {
+            _captureTargetWindow = IntPtr.Zero;
+            _resultWindow!.Close();
+            return;
+        }
+
+        await FormatSelectedTextAsync();
     }
 
     private async Task FormatSelectedTextAsync()
@@ -145,13 +160,19 @@ public partial class MainWindow : Window
         _resultWindow = new ResultWindow(
             displayText,
             selection,
-            _formatTextWorkflow.ApplyAsync,
-            _formatTextWorkflow.RetryReplacementAsync)
+            _activeModelProfile.DisplayName,
+            _formatTextWorkflow.GenerateAsync,
+            _formatTextWorkflow.ReplaceAsync)
         {
-            Owner = this,
-            Left = Math.Min(Left + Width + 10, SystemParameters.WorkArea.Right - 450),
-            Top = Math.Min(Top, SystemParameters.WorkArea.Bottom - 346)
+            Owner = this
         };
+
+        _resultWindow.Left = Math.Min(
+            Left + Width + 10,
+            SystemParameters.WorkArea.Right - _resultWindow.Width - 8);
+        _resultWindow.Top = Math.Min(
+            Top,
+            SystemParameters.WorkArea.Bottom - _resultWindow.Height - 8);
 
         _resultWindow.Left = Math.Max(SystemParameters.WorkArea.Left + 8, _resultWindow.Left);
         _resultWindow.Top = Math.Max(SystemParameters.WorkArea.Top + 8, _resultWindow.Top);
@@ -187,19 +208,31 @@ public partial class MainWindow : Window
 
     private void ModelInformation_Click(object sender, RoutedEventArgs e)
     {
-        MessageBox.Show(
-            this,
-            $"{_activeModelProfile.DisplayName}\n\n" +
-            $"Role: {_activeModelProfile.Role}\n" +
-            $"Language: {_activeModelProfile.LanguageSupport}\n" +
-            $"License: {_activeModelProfile.LicenseExpression}\n" +
-            $"Source: {_activeModelProfile.SourceRepository}\n\n" +
-            $"{_activeModelProfile.LimitationNotice}\n\n" +
-            "Always review the replaced text in the source application.",
-            "Current TextRecast model",
-            MessageBoxButton.OK,
-            _activeModelProfile.IsExperimental
-                ? MessageBoxImage.Warning
-                : MessageBoxImage.Information);
+        ShowInformationDialog(ApplicationInformation.CreateModel(_activeModelProfile));
+    }
+
+    private void LegalPrivacy_Click(object sender, RoutedEventArgs e)
+    {
+        ShowInformationDialog(ApplicationInformation.CreateLegalAndPrivacy());
+    }
+
+    private void About_Click(object sender, RoutedEventArgs e)
+    {
+        ShowInformationDialog(ApplicationInformation.CreateAbout());
+    }
+
+    private void LauncherMenu_Opened(object sender, RoutedEventArgs e)
+    {
+        ApplicationTheme.Apply(this);
+    }
+
+    private void ShowInformationDialog(InformationDialogContent content)
+    {
+        var dialog = new InformationWindow(content)
+        {
+            Owner = this
+        };
+        dialog.ShowDialog();
+        KeepLauncherOnTop();
     }
 }

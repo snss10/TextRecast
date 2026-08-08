@@ -7,6 +7,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\TextRecast.Core\TextRecast.Core.csproj" />
+    <ProjectReference Include="..\..\src\TextRecast.Deployment\TextRecast.Deployment.csproj" />
     <ProjectReference Include="..\..\src\TextRecast.Infrastructure\TextRecast.Infrastructure.csproj" />
   </ItemGroup>
 </Project>

@@ -1,0 +1,669 @@
+<Window x:Class="TextRecast.Setup.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+        mc:Ignorable="d"
+        Title="Setup - TextRecast"
+        Icon="Assets/Brand/TextRecast.ico"
+        Width="525"
+        Height="377"
+        MinWidth="500"
+        MinHeight="350"
+        ResizeMode="CanResize"
+        WindowStartupLocation="CenterScreen"
+        FontFamily="Segoe UI"
+        FontSize="12"
+        Background="{DynamicResource WindowBackgroundBrush}"
+        Foreground="{DynamicResource PrimaryTextBrush}">
+  <Window.Resources>
+    <sys:Double x:Key="RadioIndicatorSize">14</sys:Double>
+    <sys:Double x:Key="RadioDotSize">6</sys:Double>
+    <Style TargetType="TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
+    </Style>
+    <Style TargetType="Button">
+      <Setter Property="Background" Value="{DynamicResource SubtleBackgroundBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="ButtonChrome"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="2"
+                    SnapsToDevicePixels="True">
+              <ContentPresenter Margin="{TemplateBinding Padding}"
+                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                RecognizesAccessKey="True" />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsDefault" Value="True">
+                <Setter TargetName="ButtonChrome" Property="BorderBrush"
+                        Value="{DynamicResource AccentBrush}" />
+              </Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="True">
+                <Setter TargetName="ButtonChrome" Property="BorderBrush"
+                        Value="{DynamicResource AccentBrush}" />
+              </Trigger>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="ButtonChrome" Property="Background"
+                        Value="{DynamicResource ControlHoverBrush}" />
+              </Trigger>
+              <Trigger Property="IsPressed" Value="True">
+                <Setter TargetName="ButtonChrome" Property="Background"
+                        Value="{DynamicResource ControlPressedBrush}" />
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter TargetName="ButtonChrome" Property="Background"
+                        Value="{DynamicResource DisabledBackgroundBrush}" />
+                <Setter TargetName="ButtonChrome" Property="BorderBrush"
+                        Value="{DynamicResource DisabledBorderBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
+                <Setter Property="Opacity" Value="0.68" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style TargetType="RadioButton">
+      <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="RadioButton">
+            <Grid Background="Transparent" SnapsToDevicePixels="True">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <Grid Width="{DynamicResource RadioIndicatorSize}"
+                    Height="{DynamicResource RadioIndicatorSize}"
+                    VerticalAlignment="Center">
+                <Ellipse x:Name="RadioOuter"
+                         Fill="{DynamicResource WindowBackgroundBrush}"
+                         Stroke="{DynamicResource SecondaryTextBrush}"
+                         StrokeThickness="1" />
+                <Ellipse x:Name="RadioDot"
+                         Width="{DynamicResource RadioDotSize}"
+                         Height="{DynamicResource RadioDotSize}"
+                         Fill="{DynamicResource AccentBrush}"
+                         Visibility="Collapsed" />
+              </Grid>
+              <ContentPresenter Grid.Column="1" Margin="5,0,0,0"
+                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                RecognizesAccessKey="True" />
+            </Grid>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsChecked" Value="True">
+                <Setter TargetName="RadioOuter" Property="Stroke"
+                        Value="{DynamicResource AccentBrush}" />
+                <Setter TargetName="RadioOuter" Property="StrokeThickness" Value="2" />
+                <Setter TargetName="RadioDot" Property="Visibility" Value="Visible" />
+              </Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="True">
+                <Setter TargetName="RadioOuter" Property="Stroke"
+                        Value="{DynamicResource AccentBrush}" />
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Opacity" Value="0.5" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style TargetType="CheckBox">
+      <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="CheckBox">
+            <Grid Background="Transparent" SnapsToDevicePixels="True">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="14" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <Border x:Name="CheckChrome" Width="12" Height="12"
+                      Background="{DynamicResource WindowBackgroundBrush}"
+                      BorderBrush="{DynamicResource SecondaryTextBrush}"
+                      BorderThickness="1" CornerRadius="1">
+                <TextBlock x:Name="CheckGlyph" FontFamily="Segoe Fluent Icons"
+                           FontSize="7" Text="&#xE8FB;" TextAlignment="Center"
+                           VerticalAlignment="Center" Foreground="White"
+                           Visibility="Collapsed" />
+              </Border>
+              <ContentPresenter Grid.Column="1" Margin="5,0,0,0"
+                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                RecognizesAccessKey="True" />
+            </Grid>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsChecked" Value="True">
+                <Setter TargetName="CheckChrome" Property="Background"
+                        Value="{DynamicResource AccentBrush}" />
+                <Setter TargetName="CheckChrome" Property="BorderBrush"
+                        Value="{DynamicResource AccentBrush}" />
+                <Setter TargetName="CheckGlyph" Property="Visibility" Value="Visible" />
+              </Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="True">
+                <Setter TargetName="CheckChrome" Property="BorderBrush"
+                        Value="{DynamicResource AccentBrush}" />
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Opacity" Value="0.5" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style TargetType="Image">
+      <Setter Property="RenderOptions.BitmapScalingMode" Value="HighQuality" />
+      <Setter Property="SnapsToDevicePixels" Value="False" />
+    </Style>
+    <Style x:Key="SecondaryText" TargetType="TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style x:Key="NavButton" TargetType="Button"
+           BasedOn="{StaticResource {x:Type Button}}">
+      <Setter Property="MinWidth" Value="66" />
+      <Setter Property="Height" Value="25" />
+      <Setter Property="Padding" Value="8,1" />
+    </Style>
+    <Style x:Key="LinkButton" TargetType="Button">
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="HorizontalContentAlignment" Value="Left" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                              VerticalAlignment="Center" />
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Opacity" Value="0.72" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style x:Key="SectionTitle" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="16" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="Margin" Value="0,0,0,5" />
+    </Style>
+    <Style x:Key="SummaryLabel" TargetType="TextBlock">
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Margin" Value="0,8" />
+    </Style>
+  </Window.Resources>
+
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="*" />
+      <RowDefinition Height="44" />
+    </Grid.RowDefinitions>
+
+    <Grid Grid.Row="0">
+      <!-- Screen 01: Welcome -->
+      <Grid x:Name="WelcomePage">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="190" />
+          <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Border Background="{DynamicResource BrandPanelBrush}">
+          <StackPanel HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,28,0,0">
+            <TextBlock FontSize="20" FontWeight="SemiBold"
+                       Foreground="{DynamicResource BrandTextBrush}" Text="TextRecast" />
+            <Image Width="120" Height="120" Margin="0,14,0,0"
+                   Source="Assets/Brand/textrecast-mark.png"
+                   Stretch="Uniform"
+                   AutomationProperties.Name="TextRecast logo" />
+          </StackPanel>
+        </Border>
+        <StackPanel Grid.Column="1" Margin="26,18,22,8">
+          <TextBlock Style="{StaticResource SectionTitle}"
+                     Text="Welcome to the TextRecast&#x0a;Setup Wizard" />
+          <TextBlock x:Name="WelcomeVersionTextBlock" Margin="0,10,0,0"
+                     Style="{StaticResource SecondaryText}" />
+          <TextBlock Margin="0,10,0,0" Style="{StaticResource SecondaryText}"
+                     Text="Setup will install the application and let you choose one local language model." />
+          <TextBlock Margin="0,10,0,0" Style="{StaticResource SecondaryText}"
+                     Text="It is recommended that you close TextRecast before continuing." />
+          <TextBlock Margin="0,10,0,0" Style="{StaticResource SecondaryText}"
+                     Text="Click Next to continue, or Cancel to exit Setup." />
+          <TextBlock x:Name="RecoveryNoticeTextBlock" Margin="0,10,0,0" FontSize="11"
+                     Foreground="{DynamicResource AccentBrush}" TextWrapping="Wrap"
+                     Visibility="Collapsed" />
+        </StackPanel>
+      </Grid>
+
+      <!-- Screens 02-06 share a conventional setup header. -->
+      <Grid x:Name="WizardPage" Visibility="Collapsed">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="72" />
+          <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1"
+                Padding="20,4,8,4">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="64" />
+            </Grid.ColumnDefinitions>
+            <StackPanel VerticalAlignment="Center">
+              <TextBlock x:Name="PageTitleTextBlock" FontSize="15" FontWeight="SemiBold" />
+              <TextBlock x:Name="PageSubtitleTextBlock" Margin="0,2,0,0" FontSize="11"
+                         Style="{StaticResource SecondaryText}" />
+            </StackPanel>
+            <Image Grid.Column="1" Width="64" Height="64"
+                   Source="Assets/Brand/textrecast-icon.png" Stretch="Uniform"
+                   AutomationProperties.Name="TextRecast logo" />
+          </Grid>
+        </Border>
+
+        <Grid Grid.Row="1">
+          <!-- Screen 02: License and Privacy -->
+          <Grid x:Name="LegalPage" Margin="20,8,20,6" Visibility="Collapsed">
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <TextBlock Text="TextRecast is provided under the Apache License 2.0."
+                       Style="{StaticResource SecondaryText}" />
+            <TextBox x:Name="LicensePreviewTextBox" Grid.Row="1" Height="74" Margin="0,4"
+                     Padding="6" IsReadOnly="True" TextWrapping="Wrap" FontSize="11"
+                     VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                     Background="{DynamicResource PanelBackgroundBrush}"
+                     Foreground="{DynamicResource PrimaryTextBrush}"
+                     BorderBrush="{DynamicResource BorderBrush}"
+                     AutomationProperties.Name="Apache License 2.0 text">
+              <TextBox.Resources>
+                <sys:Double x:Key="{x:Static SystemParameters.VerticalScrollBarWidthKey}">10</sys:Double>
+                <Style TargetType="{x:Type ScrollBar}">
+                  <Setter Property="Width" Value="10" />
+                  <Setter Property="Template">
+                    <Setter.Value>
+                      <ControlTemplate TargetType="{x:Type ScrollBar}">
+                        <Grid Width="10" Background="Transparent">
+                          <Track x:Name="PART_Track" IsDirectionReversed="True">
+                            <Track.DecreaseRepeatButton>
+                              <RepeatButton Command="{x:Static ScrollBar.PageUpCommand}"
+                                            Focusable="False">
+                                <RepeatButton.Template>
+                                  <ControlTemplate TargetType="{x:Type RepeatButton}">
+                                    <Border Background="Transparent" />
+                                  </ControlTemplate>
+                                </RepeatButton.Template>
+                              </RepeatButton>
+                            </Track.DecreaseRepeatButton>
+                            <Track.Thumb>
+                              <Thumb MinHeight="18">
+                                <Thumb.Template>
+                                  <ControlTemplate TargetType="{x:Type Thumb}">
+                                    <Border Width="5" Margin="2,1"
+                                            HorizontalAlignment="Center"
+                                            Background="{DynamicResource SecondaryTextBrush}"
+                                            CornerRadius="2" Opacity="0.55" />
+                                  </ControlTemplate>
+                                </Thumb.Template>
+                              </Thumb>
+                            </Track.Thumb>
+                            <Track.IncreaseRepeatButton>
+                              <RepeatButton Command="{x:Static ScrollBar.PageDownCommand}"
+                                            Focusable="False">
+                                <RepeatButton.Template>
+                                  <ControlTemplate TargetType="{x:Type RepeatButton}">
+                                    <Border Background="Transparent" />
+                                  </ControlTemplate>
+                                </RepeatButton.Template>
+                              </RepeatButton>
+                            </Track.IncreaseRepeatButton>
+                          </Track>
+                        </Grid>
+                      </ControlTemplate>
+                    </Setter.Value>
+                  </Setter>
+                </Style>
+              </TextBox.Resources>
+            </TextBox>
+            <TextBlock Grid.Row="2" Margin="0,0,0,4" FontSize="11"
+                       Style="{StaticResource SecondaryText}"
+                       Text="Selected and generated text is processed locally. Setup connects to the internet only to download the model you choose later." />
+            <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,4">
+              <Button Style="{StaticResource LinkButton}" Click="LicenseLink_Click">
+                <TextBlock Foreground="{DynamicResource AccentBrush}"
+                           Text="View third-party notices" TextDecorations="Underline" />
+              </Button>
+              <TextBlock Margin="12,0" Foreground="{DynamicResource SecondaryTextBrush}" Text="|" />
+              <Button Style="{StaticResource LinkButton}" Click="PrivacyLink_Click">
+                <TextBlock Foreground="{DynamicResource AccentBrush}"
+                           Text="Read full privacy notice" TextDecorations="Underline" />
+              </Button>
+            </StackPanel>
+            <StackPanel Grid.Row="4">
+              <StackPanel.Resources>
+                <sys:Double x:Key="RadioIndicatorSize">12</sys:Double>
+                <sys:Double x:Key="RadioDotSize">4</sys:Double>
+              </StackPanel.Resources>
+              <RadioButton x:Name="AcceptRadioButton" Margin="0,0,0,3" FontSize="11"
+                           Content="I accept the Apache License 2.0 terms and acknowledge the privacy notice."
+                           Checked="AcceptRadioButton_Checked" />
+              <RadioButton x:Name="DeclineRadioButton" FontSize="11"
+                           Content="I do not accept and want to exit Setup."
+                           Checked="DeclineRadioButton_Checked" />
+            </StackPanel>
+          </Grid>
+
+          <!-- Screen 03: Destination -->
+          <Grid x:Name="DestinationPage" Margin="20,18,20,14" Visibility="Collapsed">
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="*" />
+              <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <StackPanel>
+              <TextBlock Text="Setup will install TextRecast into the following folder."
+                         Style="{StaticResource SecondaryText}" />
+              <TextBlock Margin="0,10,0,0"
+                         Text="To continue, click Next. To choose a different folder, click Browse."
+                         Style="{StaticResource SecondaryText}" />
+            </StackPanel>
+            <Grid Grid.Row="1" Margin="0,12,0,0">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <TextBox x:Name="InstallDirectoryTextBox" Height="27" Padding="7,3"
+                       VerticalContentAlignment="Center"
+                       Background="{DynamicResource PanelBackgroundBrush}"
+                       Foreground="{DynamicResource PrimaryTextBrush}"
+                       BorderBrush="{DynamicResource BorderBrush}"
+                       AutomationProperties.Name="Installation folder" />
+              <Button Grid.Column="1" MinWidth="80" Height="27" Margin="8,0,0,0"
+                      Content="Browse..." Click="BrowseButton_Click" />
+            </Grid>
+            <StackPanel Grid.Row="2" Margin="0,18,0,0">
+              <TextBlock Text="Application space is calculated by Setup."
+                         Style="{StaticResource SecondaryText}" />
+              <TextBlock Margin="0,8,0,0" TextWrapping="Wrap"
+                         Text="The selected model is stored separately in %LOCALAPPDATA%\TextRecast\Models; its size is shown on the next page."
+                         Style="{StaticResource SecondaryText}" />
+            </StackPanel>
+            <TextBlock x:Name="DestinationErrorTextBlock" Grid.Row="3"
+                       Foreground="#D13438" TextWrapping="Wrap" />
+          </Grid>
+
+          <!-- Screen 04: Model choice -->
+          <Grid x:Name="ModelChoicePage" Margin="20,14,20,10" Visibility="Collapsed">
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="*" />
+              <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    CornerRadius="3" VerticalAlignment="Top">
+              <StackPanel>
+                <Grid Height="38" Margin="6,0">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="28" />
+                    <ColumnDefinition Width="2.1*" />
+                    <ColumnDefinition Width="1.5*" />
+                    <ColumnDefinition Width="1*" />
+                  </Grid.ColumnDefinitions>
+                  <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="Model" />
+                  <TextBlock Grid.Column="2" VerticalAlignment="Center" Text="Profile" />
+                  <TextBlock Grid.Column="3" VerticalAlignment="Center" Text="Size" />
+                </Grid>
+                <ItemsControl x:Name="ModelChoicesItemsControl">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border x:Name="ModelRowBorder" Height="38" Padding="6,0"
+                              BorderBrush="{DynamicResource BorderBrush}"
+                              BorderThickness="0,1,0,0"
+                              CornerRadius="3"
+                              ToolTip="{Binding Details}"
+                              ToolTipService.ShowDuration="60000">
+                        <Grid>
+                          <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="28" />
+                            <ColumnDefinition Width="2.1*" />
+                            <ColumnDefinition Width="1.5*" />
+                            <ColumnDefinition Width="1*" />
+                          </Grid.ColumnDefinitions>
+                          <RadioButton x:Name="ModelRadioButton" VerticalAlignment="Center"
+                                       GroupName="SetupModels" Tag="{Binding Id}"
+                                       IsEnabled="{Binding IsCompatible}"
+                                       Loaded="ModelRadioButton_Loaded"
+                                       Checked="ModelRadioButton_Checked"
+                                       AutomationProperties.Name="{Binding Name}"
+                                       AutomationProperties.HelpText="{Binding AccessibleDetails}" />
+                          <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="{Binding Name}" />
+                          <TextBlock Grid.Column="2" VerticalAlignment="Center" Text="{Binding Profile}" />
+                          <TextBlock Grid.Column="3" VerticalAlignment="Center" Text="{Binding Size}" />
+                        </Grid>
+                      </Border>
+                      <DataTemplate.Triggers>
+                        <DataTrigger Binding="{Binding IsChecked, ElementName=ModelRadioButton}" Value="True">
+                          <Setter TargetName="ModelRowBorder" Property="Background" Value="#1A0078D4" />
+                          <Setter TargetName="ModelRowBorder" Property="BorderBrush"
+                                  Value="{DynamicResource AccentBrush}" />
+                          <Setter TargetName="ModelRowBorder" Property="BorderThickness" Value="1" />
+                          <Setter TargetName="ModelRowBorder" Property="Margin" Value="-1,-1,-1,0" />
+                          <Setter TargetName="ModelRowBorder" Property="Panel.ZIndex" Value="1" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding IsCompatible}" Value="False">
+                          <Setter TargetName="ModelRowBorder" Property="Opacity" Value="0.55" />
+                        </DataTrigger>
+                      </DataTemplate.Triggers>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </Border>
+            <TextBlock x:Name="ModelGuidanceTextBlock" Grid.Row="2" Visibility="Collapsed"
+                       Style="{StaticResource SecondaryText}" />
+          </Grid>
+
+          <!-- Screen 05: Ready -->
+          <Grid x:Name="ReadyPage" Margin="28,16,28,12" Visibility="Collapsed">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="120" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <TextBlock Grid.ColumnSpan="2" Margin="0,0,0,8"
+                       Style="{StaticResource SecondaryText}"
+                       Text="Review the settings below. Click Install to continue, or Back to change them." />
+            <TextBlock Grid.Row="1" Style="{StaticResource SummaryLabel}" Text="Version" />
+            <TextBlock x:Name="ReadyVersionTextBlock" Grid.Row="1" Grid.Column="1" Margin="0,8" />
+            <TextBlock Grid.Row="2" Style="{StaticResource SummaryLabel}" Text="Destination" />
+            <TextBlock x:Name="ReadyDestinationTextBlock" Grid.Row="2" Grid.Column="1"
+                       Margin="0,8" TextWrapping="Wrap" />
+            <TextBlock Grid.Row="3" Style="{StaticResource SummaryLabel}" Text="Selected model" />
+            <TextBlock x:Name="ReadyModelTextBlock" Grid.Row="3" Grid.Column="1" Margin="0,8" />
+            <TextBlock Grid.Row="4" VerticalAlignment="Top" Style="{StaticResource SummaryLabel}"
+                       Text="Model download" />
+            <TextBlock x:Name="ReadyDownloadTextBlock" Grid.Row="4" Grid.Column="1"
+                       Margin="0,8" VerticalAlignment="Top" />
+            <TextBlock Grid.Row="4" Grid.ColumnSpan="2" Margin="0,42,0,0"
+                       VerticalAlignment="Top" Style="{StaticResource SecondaryText}"
+                       Text="Only the selected model will be downloaded and verified." />
+          </Grid>
+
+          <!-- Screen 06: Installing -->
+          <Grid x:Name="InstallingPage" Margin="20,11,20,7" Visibility="Collapsed">
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="*" />
+              <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <TextBlock x:Name="ProgressTitleTextBlock" FontSize="13"
+                       Text="Installing application files..." />
+            <ProgressBar x:Name="DownloadProgressBar" Grid.Row="1" Height="6"
+                         Margin="0,8,0,6" Minimum="0" Maximum="100"
+                         Foreground="{DynamicResource ProgressBrush}" />
+            <TextBlock x:Name="TransferMetricsTextBlock" Grid.Row="2"
+                       Style="{StaticResource SecondaryText}" />
+            <StackPanel Grid.Row="3" Margin="0,8,0,0">
+              <TextBlock Text="Downloading from the pinned model source."
+                         Style="{StaticResource SecondaryText}" />
+              <TextBlock Margin="0,3,0,0"
+                         Text="Partial download data is kept when possible if Setup is cancelled."
+                         Style="{StaticResource SecondaryText}" />
+            </StackPanel>
+            <StackPanel Grid.Row="4" Margin="0,7,0,0">
+              <Grid Height="20">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="20" />
+                  <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border x:Name="ApplicationStageIndicator" Width="14" Height="14"
+                        HorizontalAlignment="Left" VerticalAlignment="Center"
+                        CornerRadius="7" BorderThickness="1.5"
+                        BorderBrush="{DynamicResource SecondaryTextBrush}">
+                  <TextBlock x:Name="ApplicationStageCheck" FontFamily="Segoe Fluent Icons"
+                             FontSize="9" Text="&#xE8FB;" TextAlignment="Center"
+                             VerticalAlignment="Center" Foreground="White"
+                             Visibility="Collapsed" />
+                </Border>
+                <TextBlock x:Name="ApplicationStageTextBlock" Grid.Column="1"
+                           VerticalAlignment="Center" Text="Application files installed" />
+              </Grid>
+              <Grid Height="20">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="20" />
+                  <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border x:Name="DownloadStageIndicator" Width="14" Height="14"
+                        HorizontalAlignment="Left" VerticalAlignment="Center"
+                        CornerRadius="7" BorderThickness="1.5"
+                        BorderBrush="{DynamicResource SecondaryTextBrush}">
+                  <TextBlock x:Name="DownloadStageCheck" FontFamily="Segoe Fluent Icons"
+                             FontSize="9" Text="&#xE8FB;" TextAlignment="Center"
+                             VerticalAlignment="Center" Foreground="White"
+                             Visibility="Collapsed" />
+                </Border>
+                <TextBlock x:Name="DownloadStageTextBlock" Grid.Column="1"
+                           VerticalAlignment="Center" Text="Downloading selected model" />
+              </Grid>
+              <Grid Height="20">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="20" />
+                  <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border x:Name="VerifyStageIndicator" Width="14" Height="14"
+                        HorizontalAlignment="Left" VerticalAlignment="Center"
+                        CornerRadius="7" BorderThickness="1.5"
+                        BorderBrush="{DynamicResource SecondaryTextBrush}">
+                  <TextBlock x:Name="VerifyStageCheck" FontFamily="Segoe Fluent Icons"
+                             FontSize="9" Text="&#xE8FB;" TextAlignment="Center"
+                             VerticalAlignment="Center" Foreground="White"
+                             Visibility="Collapsed" />
+                </Border>
+                <TextBlock x:Name="VerifyStageTextBlock" Grid.Column="1"
+                           VerticalAlignment="Center" Text="Verify file size and SHA-256" />
+              </Grid>
+              <Grid Height="20">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="20" />
+                  <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border x:Name="CompleteStageIndicator" Width="14" Height="14"
+                        HorizontalAlignment="Left" VerticalAlignment="Center"
+                        CornerRadius="7" BorderThickness="1.5"
+                        BorderBrush="{DynamicResource SecondaryTextBrush}">
+                  <TextBlock x:Name="CompleteStageCheck" FontFamily="Segoe Fluent Icons"
+                             FontSize="9" Text="&#xE8FB;" TextAlignment="Center"
+                             VerticalAlignment="Center" Foreground="White"
+                             Visibility="Collapsed" />
+                </Border>
+                <TextBlock x:Name="CompleteStageTextBlock" Grid.Column="1"
+                           VerticalAlignment="Center" Text="Complete setup" />
+              </Grid>
+            </StackPanel>
+            <TextBlock x:Name="InstallStatusTextBlock" Grid.Row="5" TextWrapping="Wrap"
+                       Foreground="{DynamicResource SecondaryTextBrush}" />
+          </Grid>
+        </Grid>
+      </Grid>
+
+      <!-- Screen 07: Complete -->
+      <Grid x:Name="CompletePage" Visibility="Collapsed">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="190" />
+          <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Border Background="{DynamicResource BrandPanelBrush}">
+          <StackPanel HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,28,0,0">
+            <TextBlock FontSize="20" FontWeight="SemiBold"
+                       Foreground="{DynamicResource BrandTextBrush}" Text="TextRecast" />
+            <Image Width="120" Height="120" Margin="0,14,0,0"
+                   Source="Assets/Brand/textrecast-mark.png"
+                   Stretch="Uniform" AutomationProperties.Name="TextRecast logo" />
+          </StackPanel>
+        </Border>
+        <StackPanel Grid.Column="1" Margin="26,24,22,14">
+          <TextBlock Style="{StaticResource SectionTitle}"
+                     Text="Completing the TextRecast&#x0a;Setup Wizard" />
+          <TextBlock Margin="0,8,0,0" Style="{StaticResource SecondaryText}"
+                     Text="TextRecast has been installed successfully." />
+          <TextBlock x:Name="CompleteModelTextBlock" Margin="0,8,0,0" />
+          <TextBlock Margin="0,8,0,0" Style="{StaticResource SecondaryText}"
+                     Text="Select editable text, then use the floating TextRecast button." />
+          <CheckBox x:Name="LaunchCheckBox" Margin="0,10,0,0" IsChecked="True"
+                    Content="Launch TextRecast" />
+          <CheckBox x:Name="DesktopShortcutCheckBox" Margin="0,5,0,0" IsChecked="True"
+                    Content="Add a desktop shortcut" />
+          <CheckBox x:Name="StartupCheckBox" Margin="0,5,0,0" IsChecked="True"
+                    Content="Start TextRecast when I sign in" />
+          <Button Margin="0,6,0,0" Style="{StaticResource LinkButton}"
+                  HorizontalAlignment="Left" Click="LegalAndPrivacyLink_Click">
+            <TextBlock Foreground="{DynamicResource AccentBrush}"
+                       Text="View Legal &amp; Privacy information" TextDecorations="Underline" />
+          </Button>
+        </StackPanel>
+      </Grid>
+    </Grid>
+
+    <Border Grid.Row="1" Padding="10,7"
+            Background="{DynamicResource FooterBackgroundBrush}"
+            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
+      <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+        <Button x:Name="BackButton" Style="{StaticResource NavButton}" Margin="0,0,6,0"
+                Content="Back" Click="BackButton_Click" />
+        <Button x:Name="NextButton" Style="{StaticResource NavButton}" Margin="0,0,6,0"
+                Content="Next" IsDefault="True" Click="NextButton_Click" />
+        <Button x:Name="CancelButton" Style="{StaticResource NavButton}"
+                Content="Cancel" IsCancel="True" Click="CancelButton_Click" />
+      </StackPanel>
+    </Border>
+  </Grid>
+</Window>

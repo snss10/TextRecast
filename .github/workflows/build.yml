@@ -14,7 +14,7 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
 
     steps:
       - name: Check out repository
@@ -51,7 +51,7 @@ jobs:
           }
 
           "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-          "package_name=TextRecast-v$version-win-x64" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "setup_name=TextRecast-v$version-win-x64-setup" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
       - name: Restore dependencies
         run: dotnet restore TextRecast.slnx
@@ -65,6 +65,26 @@ jobs:
       - name: Build release
         run: dotnet build TextRecast.slnx -c Release --no-restore
 
+      - name: Verify setup dependency boundary
+        shell: pwsh
+        run: |
+          [xml] $setupProject = Get-Content -Raw src/TextRecast.Setup/TextRecast.Setup.csproj
+          [xml] $deploymentProject = Get-Content -Raw src/TextRecast.Deployment/TextRecast.Deployment.csproj
+
+          $setupReferences = @($setupProject.SelectNodes("//ProjectReference") | ForEach-Object { $_.Include })
+          if ($setupReferences.Count -ne 1 -or
+              $setupReferences[0] -ne "..\TextRecast.Deployment\TextRecast.Deployment.csproj") {
+            throw "The setup host must reference only TextRecast.Deployment."
+          }
+
+          if (@($deploymentProject.SelectNodes("//PackageReference")).Count -ne 0) {
+            throw "TextRecast.Deployment must remain package-free."
+          }
+
+          if (@($setupProject.SelectNodes("//PackageReference")).Count -ne 0) {
+            throw "The setup host must remain package-free."
+          }
+
       - name: Publish self-contained application
         run: >-
           dotnet publish src/TextRecast.App/TextRecast.App.csproj
@@ -75,47 +95,48 @@ jobs:
           -p:Version=${{ steps.version.outputs.version }}
           -o artifacts/publish/TextRecast-win-x64
 
-      - name: Create versioned release package
+      - name: Prepare controlled upgrade fixture
         shell: pwsh
-        env:
-          PACKAGE_NAME: ${{ steps.version.outputs.package_name }}
         run: |
-          $publishDirectory = (Resolve-Path "artifacts/publish/TextRecast-win-x64").Path
-          $releaseDirectory = Join-Path $PWD "artifacts/release"
-          New-Item -ItemType Directory -Path $releaseDirectory -Force | Out-Null
+          $source = (Resolve-Path "artifacts/publish/TextRecast-win-x64").Path
+          $fixture = Join-Path $PWD "artifacts/smoke/previous-publish"
+          New-Item -ItemType Directory -Path $fixture -Force | Out-Null
+          Copy-Item -Path (Join-Path $source "*") -Destination $fixture -Recurse -Force
+          Set-Content -LiteralPath (Join-Path $fixture "obsolete-v0.1-fixture.txt") -Value "upgrade fixture" -NoNewline
 
-          $requiredFiles = @(
-            "TextRecast.exe",
-            "LICENSE",
-            "NOTICE",
-            "THIRD-PARTY-NOTICES.md",
-            "DOTNET-LICENSE.txt",
-            "DOTNET-THIRD-PARTY-NOTICES.txt",
-            "WPF-LICENSE.txt"
-          )
-          foreach ($file in $requiredFiles) {
-            if (-not (Test-Path -LiteralPath (Join-Path $publishDirectory $file) -PathType Leaf)) {
-              throw "Published application is missing required file: $file"
-            }
-          }
+      - name: Build controlled upgrade installer fixture
+        shell: pwsh
+        run: >-
+          ./tools/Build-WindowsInstaller.ps1
+          -Version 0.1.0
+          -PublishDirectory artifacts/smoke/previous-publish
+          -OutputDirectory artifacts/smoke/previous
+          -NoRestore
 
-          $modelFiles = @(Get-ChildItem -Path $publishDirectory -Filter "*.gguf" -File -Recurse)
-          if ($modelFiles.Count -ne 0) {
-            throw "Release packages must not contain GGUF model files."
-          }
+      - name: Build Windows setup
+        shell: pwsh
+        run: >-
+          ./tools/Build-WindowsInstaller.ps1
+          -Version ${{ steps.version.outputs.version }}
+          -PublishDirectory artifacts/publish/TextRecast-win-x64
+          -OutputDirectory artifacts/release
+          -NoRestore
 
-          $archiveFileName = "$env:PACKAGE_NAME.zip"
-          $archivePath = Join-Path $releaseDirectory $archiveFileName
-          Compress-Archive -Path (Join-Path $publishDirectory "*") -DestinationPath $archivePath -Force
+      - name: Smoke test install, launch, payload replacement, uninstall, and reinstall
+        shell: pwsh
+        run: >-
+          ./tools/Test-WindowsInstaller.ps1
+          -SetupPath artifacts/release/${{ steps.version.outputs.setup_name }}.exe
+          -ExpectedVersion ${{ steps.version.outputs.version }}
+          -PreviousSetupPath artifacts/smoke/previous/TextRecast-v0.1.0-win-x64-setup.exe
+          -PreviousVersion 0.1.0
+          -UpgradeFixtureFileName obsolete-v0.1-fixture.txt
 
-          $checksum = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
-          Set-Content -LiteralPath "$archivePath.sha256" -Value "$checksum  $archiveFileName" -NoNewline
-
-      - name: Upload Windows release package
+      - name: Upload Windows setup
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ steps.version.outputs.package_name }}
+          name: ${{ steps.version.outputs.setup_name }}
           path: |
-            artifacts/release/${{ steps.version.outputs.package_name }}.zip
-            artifacts/release/${{ steps.version.outputs.package_name }}.zip.sha256
+            artifacts/release/${{ steps.version.outputs.setup_name }}.exe
+            artifacts/release/${{ steps.version.outputs.setup_name }}.exe.sha256
           if-no-files-found: error

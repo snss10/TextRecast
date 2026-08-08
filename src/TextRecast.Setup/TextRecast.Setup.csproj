@@ -1,0 +1,53 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <AssemblyName>TextRecast.Setup</AssemblyName>
+    <RootNamespace>TextRecast.Setup</RootNamespace>
+    <Product>TextRecast Setup</Product>
+    <Title>TextRecast Setup</Title>
+    <AssemblyTitle>TextRecast Setup</AssemblyTitle>
+    <Company>snss10</Company>
+    <Authors>snss10</Authors>
+    <Copyright>Copyright 2026 snss10</Copyright>
+    <Description>Per-user Windows setup host for TextRecast.</Description>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PlatformTarget>x64</PlatformTarget>
+    <UseWPF>true</UseWPF>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <ApplicationIcon>..\TextRecast.App\Assets\Brand\TextRecast.ico</ApplicationIcon>
+    <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>
+    <DebugSymbols Condition="'$(Configuration)' == 'Release'">false</DebugSymbols>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TextRecast.Deployment\TextRecast.Deployment.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="..\TextRecast.App\Assets\Brand\textrecast-mark.png"
+              Link="Assets\Brand\textrecast-mark.png" />
+    <Resource Include="..\TextRecast.App\Assets\Brand\textrecast-icon.png"
+              Link="Assets\Brand\textrecast-icon.png" />
+    <Resource Include="..\TextRecast.App\Assets\Brand\TextRecast.ico"
+              Link="Assets\Brand\TextRecast.ico" />
+    <EmbeddedResource Include="$(EmbeddedPackagePath)"
+                      Condition="'$(EmbeddedPackagePath)' != ''"
+                      LogicalName="TextRecast.Package.exe" />
+    <EmbeddedResource Include="..\..\LICENSE" LogicalName="TextRecast.Legal.LICENSE" />
+    <EmbeddedResource Include="..\..\PRIVACY.md" LogicalName="TextRecast.Legal.PRIVACY.md" />
+    <EmbeddedResource Include="..\..\NOTICE" LogicalName="TextRecast.Legal.NOTICE" />
+    <EmbeddedResource Include="..\..\THIRD-PARTY-NOTICES.md"
+                      LogicalName="TextRecast.Legal.THIRD-PARTY-NOTICES.md" />
+  </ItemGroup>
+
+  <Target Name="ValidateEmbeddedPackage"
+          BeforeTargets="PrepareForPublish"
+          Condition="'$(EmbeddedPackagePath)' != ''">
+    <Error Condition="!Exists('$(EmbeddedPackagePath)')"
+           Text="The internal TextRecast package was not found at $(EmbeddedPackagePath)." />
+  </Target>
+</Project>
