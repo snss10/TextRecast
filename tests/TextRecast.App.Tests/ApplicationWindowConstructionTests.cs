@@ -61,6 +61,20 @@ public sealed class ApplicationWindowConstructionTests
                     });
 
                 Assert.AreEqual(52, launcher.Width);
+                Assert.AreEqual(176, launcher.ContextMenu!.MinWidth);
+                Assert.AreEqual(new Thickness(3), launcher.ContextMenu.Padding);
+                var launcherMenuItems = launcher.ContextMenu.Items
+                    .OfType<MenuItem>()
+                    .ToArray();
+                Assert.AreEqual(5, launcherMenuItems.Length);
+                Assert.IsTrue(launcherMenuItems.All(item => item.Height == 28));
+                Assert.IsTrue(launcherMenuItems.All(item =>
+                    item.Icon is FrameworkElement { Width: 14, Height: 14 }));
+                launcher.Show();
+                launcher.ToggleEditorAsync().GetAwaiter().GetResult();
+                Assert.IsTrue(launcher.IsEditorVisible);
+                launcher.ToggleEditorAsync().GetAwaiter().GetResult();
+                Assert.IsFalse(launcher.IsEditorVisible);
                 Assert.AreEqual(560, information.Width);
                 Assert.AreEqual(440, information.Height);
                 Assert.IsFalse(information.ShowInTaskbar);
@@ -158,8 +172,50 @@ public sealed class ApplicationWindowConstructionTests
 
                 Assert.AreEqual(2, generationCount);
                 Assert.AreEqual(1, replacementCount);
+                Assert.IsFalse(result.IsVisible);
+
+                var failedResult = new ResultWindow(
+                    "Original text",
+                    selection,
+                    SlmModelCatalog.Qwen35Balanced.DisplayName,
+                    (_, _, _, _, _) => Task.FromResult(
+                        new FormatTextOutcome(true, "Revised text", "Generated locally.")),
+                    (_, _, _) => Task.FromResult(
+                        TextReplacementResult.Fail("The source selection changed.")));
+                failedResult.Show();
+                var failedChoices = (Grid)failedResult.FindName("OperationChoices");
+                failedChoices.Children.OfType<RadioButton>().First().IsChecked = true;
+                ((Button)failedResult.FindName("ReplaceButton")).RaiseEvent(
+                    new RoutedEventArgs(Button.ClickEvent));
+
+                Assert.IsTrue(failedResult.IsVisible);
+                StringAssert.Contains(
+                    ((TextBlock)failedResult.FindName("StatusTextBlock")).Text,
+                    "source selection changed");
+
+                var warningResult = new ResultWindow(
+                    "Original text",
+                    selection,
+                    SlmModelCatalog.Qwen35Balanced.DisplayName,
+                    (_, _, _, _, _) => Task.FromResult(
+                        new FormatTextOutcome(true, "Revised text", "Generated locally.")),
+                    (_, _, _) => Task.FromResult(
+                        TextReplacementResult.Ok(
+                            "The previous clipboard content could not be restored.")));
+                warningResult.Show();
+                var warningChoices = (Grid)warningResult.FindName("OperationChoices");
+                warningChoices.Children.OfType<RadioButton>().First().IsChecked = true;
+                ((Button)warningResult.FindName("ReplaceButton")).RaiseEvent(
+                    new RoutedEventArgs(Button.ClickEvent));
+
+                Assert.IsTrue(warningResult.IsVisible);
+                StringAssert.Contains(
+                    ((TextBlock)warningResult.FindName("StatusTextBlock")).Text,
+                    "clipboard content could not be restored");
 
                 result.Close();
+                failedResult.Close();
+                warningResult.Close();
                 information.Close();
                 legalInformation.Close();
                 launcher.Close();

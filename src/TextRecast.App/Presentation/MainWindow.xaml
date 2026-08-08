@@ -22,24 +22,24 @@
                 Style="{StaticResource LauncherMenuItemStyle}"
                 Click="FormatSelectedText_Click">
         <MenuItem.Icon>
-          <iconPacks:PackIconLucide Kind="Type"
+          <iconPacks:PackIconLucide Kind="Pencil" Width="14" Height="14"
                                     Foreground="{DynamicResource MenuIconBrush}" />
         </MenuItem.Icon>
       </MenuItem>
       <Separator Style="{StaticResource MenuSeparatorStyle}" />
-      <MenuItem Header="Model information..."
+      <MenuItem Header="Model information"
                 Style="{StaticResource LauncherMenuItemStyle}"
                 Click="ModelInformation_Click">
         <MenuItem.Icon>
-          <iconPacks:PackIconLucide Kind="Info"
+          <iconPacks:PackIconLucide Kind="Info" Width="14" Height="14"
                                     Foreground="{DynamicResource MenuIconBrush}" />
         </MenuItem.Icon>
       </MenuItem>
-      <MenuItem Header="Legal &amp; Privacy..."
+      <MenuItem Header="Legal &amp; Privacy"
                 Style="{StaticResource LauncherMenuItemStyle}"
                 Click="LegalPrivacy_Click">
         <MenuItem.Icon>
-          <iconPacks:PackIconLucide Kind="ShieldCheck"
+          <iconPacks:PackIconLucide Kind="ShieldCheck" Width="14" Height="14"
                                     Foreground="{DynamicResource MenuIconBrush}" />
         </MenuItem.Icon>
       </MenuItem>
@@ -47,7 +47,7 @@
                 Style="{StaticResource LauncherMenuItemStyle}"
                 Click="About_Click">
         <MenuItem.Icon>
-          <iconPacks:PackIconLucide Kind="CircleQuestionMark"
+          <iconPacks:PackIconLucide Kind="CircleQuestionMark" Width="14" Height="14"
                                     Foreground="{DynamicResource MenuIconBrush}" />
         </MenuItem.Icon>
       </MenuItem>
@@ -56,7 +56,7 @@
                 Style="{StaticResource LauncherMenuItemStyle}"
                 Click="Quit_Click">
         <MenuItem.Icon>
-          <iconPacks:PackIconLucide Kind="LogOut"
+          <iconPacks:PackIconLucide Kind="LogOut" Width="14" Height="14"
                                     Foreground="{DynamicResource MenuIconBrush}" />
         </MenuItem.Icon>
       </MenuItem>

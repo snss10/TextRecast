@@ -51,7 +51,6 @@ jobs:
           }
 
           "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-          "package_name=TextRecast-v$version-win-x64" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           "setup_name=TextRecast-v$version-win-x64-setup" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
       - name: Restore dependencies
@@ -96,54 +95,6 @@ jobs:
           -p:Version=${{ steps.version.outputs.version }}
           -o artifacts/publish/TextRecast-win-x64
 
-      - name: Create versioned release package
-        shell: pwsh
-        env:
-          PACKAGE_NAME: ${{ steps.version.outputs.package_name }}
-        run: |
-          $publishDirectory = (Resolve-Path "artifacts/publish/TextRecast-win-x64").Path
-          $releaseDirectory = Join-Path $PWD "artifacts/release"
-          New-Item -ItemType Directory -Path $releaseDirectory -Force | Out-Null
-
-          $requiredFiles = @(
-            "TextRecast.exe",
-            "LICENSE",
-            "NOTICE",
-            "PRIVACY.md",
-            "THIRD-PARTY-NOTICES.md",
-            "DOTNET-LICENSE.txt",
-            "DOTNET-THIRD-PARTY-NOTICES.txt",
-            "WPF-LICENSE.txt"
-          )
-          foreach ($file in $requiredFiles) {
-            if (-not (Test-Path -LiteralPath (Join-Path $publishDirectory $file) -PathType Leaf)) {
-              throw "Published application is missing required file: $file"
-            }
-          }
-
-          if (Test-Path -LiteralPath (Join-Path $publishDirectory "NSIS-LICENSE.txt") -PathType Leaf) {
-            throw "The standalone NSIS notice is redundant; NSIS terms must remain consolidated in THIRD-PARTY-NOTICES.md."
-          }
-
-          $excludedPayloads = @(
-            Get-ChildItem -Path $publishDirectory -File -Recurse |
-              Where-Object {
-                $_.Name -like "*.gguf" -or
-                $_.Name -like "*.partial" -or
-                $_.Name -like "*.partial.metadata.json"
-              }
-          )
-          if ($excludedPayloads.Count -ne 0) {
-            throw "Release packages must not contain model or partial-download files."
-          }
-
-          $archiveFileName = "$env:PACKAGE_NAME.zip"
-          $archivePath = Join-Path $releaseDirectory $archiveFileName
-          Compress-Archive -Path (Join-Path $publishDirectory "*") -DestinationPath $archivePath -Force
-
-          $checksum = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
-          Set-Content -LiteralPath "$archivePath.sha256" -Value "$checksum  $archiveFileName" -NoNewline
-
       - name: Prepare controlled upgrade fixture
         shell: pwsh
         run: |
@@ -180,15 +131,6 @@ jobs:
           -PreviousSetupPath artifacts/smoke/previous/TextRecast-v0.1.0-win-x64-setup.exe
           -PreviousVersion 0.1.0
           -UpgradeFixtureFileName obsolete-v0.1-fixture.txt
-
-      - name: Upload Windows release package
-        uses: actions/upload-artifact@v7
-        with:
-          name: ${{ steps.version.outputs.package_name }}
-          path: |
-            artifacts/release/${{ steps.version.outputs.package_name }}.zip
-            artifacts/release/${{ steps.version.outputs.package_name }}.zip.sha256
-          if-no-files-found: error
 
       - name: Upload Windows setup
         uses: actions/upload-artifact@v7

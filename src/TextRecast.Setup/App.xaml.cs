@@ -58,6 +58,14 @@ public partial class App : global::System.Windows.Application
                 _ => throw new InvalidOperationException("A setup operation was not selected.")
             };
 
+            if (result.Succeeded && options.Operation is SetupOperation.Install)
+            {
+                engine.ConfigureShellIntegration(
+                    installDirectory,
+                    createDesktopShortcut: true,
+                    launchAtStartup: true);
+            }
+
             Environment.ExitCode = result.ExitCode;
             if (!options.Quiet && !result.Succeeded)
             {

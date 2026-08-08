@@ -275,6 +275,13 @@ public sealed class GuidedSetupCoordinatorTests
         public string GetInstalledApplicationPath(string installDirectory) =>
             Path.Combine(installDirectory, "Application", "TextRecast.exe");
 
+        public void ConfigureShellIntegration(
+            string installDirectory,
+            bool createDesktopShortcut,
+            bool launchAtStartup)
+        {
+        }
+
         public Task<PackageOperationResult> InstallAsync(string installDirectory)
         {
             InstallCount++;

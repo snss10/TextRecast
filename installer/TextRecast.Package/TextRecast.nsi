@@ -273,6 +273,8 @@ Section "TextRecast" MainSection
   !insertmacro Fail 40 "Setup could not update the Windows installation metadata. The previous application payload was restored."
 
   clean_after_metadata_failure:
+  Delete "$DESKTOP\TextRecast.lnk"
+  Delete "$SMSTARTUP\TextRecast.lnk"
   Delete "$SMPROGRAMS\TextRecast\TextRecast.lnk"
   RMDir "$SMPROGRAMS\TextRecast"
   DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\TextRecast"
@@ -307,6 +309,8 @@ Section "Uninstall"
   uninstall_allowed:
   DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\TextRecast"
   DeleteRegKey HKCU "Software\TextRecast"
+  Delete "$DESKTOP\TextRecast.lnk"
+  Delete "$SMSTARTUP\TextRecast.lnk"
   Delete "$SMPROGRAMS\TextRecast\TextRecast.lnk"
   RMDir "$SMPROGRAMS\TextRecast"
   RMDir /r "$INSTDIR"

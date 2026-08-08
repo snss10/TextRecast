@@ -41,11 +41,17 @@ $applicationRegistryPath = "HKCU:\Software\TextRecast"
 $uninstallRegistryPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\TextRecast"
 $shortcutDirectory = Join-Path $roamingApplicationData "Microsoft\Windows\Start Menu\Programs\TextRecast"
 $shortcutPath = Join-Path $shortcutDirectory "TextRecast.lnk"
+$desktopShortcutPath = Join-Path ([Environment]::GetFolderPath(
+    [Environment+SpecialFolder]::DesktopDirectory)) "TextRecast.lnk"
+$startupShortcutPath = Join-Path ([Environment]::GetFolderPath(
+    [Environment+SpecialFolder]::Startup)) "TextRecast.lnk"
 $dataDirectoryExisted = Test-Path -LiteralPath $dataDirectory -PathType Container
 
 if ((Test-Path -LiteralPath $applicationRegistryPath) -or
     (Test-Path -LiteralPath $uninstallRegistryPath) -or
-    (Test-Path -LiteralPath $shortcutDirectory)) {
+    (Test-Path -LiteralPath $shortcutDirectory) -or
+    (Test-Path -LiteralPath $desktopShortcutPath) -or
+    (Test-Path -LiteralPath $startupShortcutPath)) {
     throw "A TextRecast installation already exists for this user. Installer smoke testing was not started."
 }
 
@@ -149,6 +155,12 @@ function Assert-InstalledVersion {
     if (-not (Test-Path -LiteralPath $shortcutPath -PathType Leaf)) {
         throw "The per-user Start Menu shortcut was not created."
     }
+    if (-not (Test-Path -LiteralPath $desktopShortcutPath -PathType Leaf)) {
+        throw "The default per-user desktop shortcut was not created."
+    }
+    if (-not (Test-Path -LiteralPath $startupShortcutPath -PathType Leaf)) {
+        throw "The default per-user Startup shortcut was not created."
+    }
 
     $applicationIdentity = Get-ItemProperty -LiteralPath $applicationRegistryPath
     if ($applicationIdentity.ProductId -ne "{FF637B7C-6CB2-470E-A9A6-7366AA51A3D6}" -or
@@ -187,7 +199,9 @@ function Assert-Uninstalled {
 
     if ((Test-Path -LiteralPath $applicationRegistryPath) -or
         (Test-Path -LiteralPath $uninstallRegistryPath) -or
-        (Test-Path -LiteralPath $shortcutPath)) {
+        (Test-Path -LiteralPath $shortcutPath) -or
+        (Test-Path -LiteralPath $desktopShortcutPath) -or
+        (Test-Path -LiteralPath $startupShortcutPath)) {
         throw "Per-user installer metadata remains after uninstall."
     }
 
@@ -265,6 +279,11 @@ finally {
     }
     if (Test-Path -LiteralPath $shortcutDirectory -PathType Container) {
         Remove-Item -LiteralPath $shortcutDirectory -Recurse -Force
+    }
+    foreach ($optionalShortcutPath in @($desktopShortcutPath, $startupShortcutPath)) {
+        if (Test-Path -LiteralPath $optionalShortcutPath -PathType Leaf) {
+            Remove-Item -LiteralPath $optionalShortcutPath -Force
+        }
     }
 
     $resolvedSmokeRoot = [IO.Path]::GetFullPath($smokeRoot)

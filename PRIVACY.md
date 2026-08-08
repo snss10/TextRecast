@@ -1,6 +1,6 @@
 # TextRecast Privacy Notice
 
-Effective: August 2, 2026
+Effective: August 8, 2026
 
 TextRecast is a local Windows writing assistant. This notice describes the data handled by the application and its installer.
 
@@ -31,7 +31,7 @@ TextRecast can store the following data for the current Windows user under `%LOC
 - a partial model download so an interrupted download can resume; and
 - the downloaded model file.
 
-The installer stores application files under the selected per-user installation directory and adds normal Windows uninstall information and shortcuts. Uninstalling the application preserves the user model and setup data so reinstalling does not require another model download. That data can be removed manually by deleting `%LOCALAPPDATA%\TextRecast` after TextRecast is closed.
+The installer stores application files under the selected per-user installation directory and adds normal Windows uninstall information and a Start Menu shortcut. On the completion page, it offers a desktop shortcut and a shortcut in the current user's Windows Startup folder; both choices are enabled by default and can be cleared before choosing Finish. The Startup shortcut launches the floating TextRecast button when that Windows user signs in. Uninstall removes these application shortcuts but preserves the user model and setup data so reinstalling does not require another model download. That data can be removed manually by deleting `%LOCALAPPDATA%\TextRecast` after TextRecast is closed.
 
 ## Questions and changes
 

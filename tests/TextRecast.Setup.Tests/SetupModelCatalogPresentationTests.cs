@@ -1,3 +1,4 @@
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -120,6 +121,18 @@ public sealed class SetupModelCatalogPresentationTests
         Assert.IsNotNull(dark.Resources["BorderBrush"]);
     }
 
+    [STATestMethod]
+    public void CompletionDefaultsEnableLaunchDesktopAndSignInShortcuts()
+    {
+        using var window = new MainWindow(new CompletionPackageEngine());
+
+        Assert.IsTrue(((CheckBox)window.FindName("LaunchCheckBox")).IsChecked);
+        Assert.IsTrue(((CheckBox)window.FindName("DesktopShortcutCheckBox")).IsChecked);
+        Assert.IsTrue(((CheckBox)window.FindName("StartupCheckBox")).IsChecked);
+
+        window.Close();
+    }
+
     private static void AssertRow(
         SetupModelChoice row,
         string expectedName,
@@ -129,5 +142,33 @@ public sealed class SetupModelCatalogPresentationTests
         Assert.AreEqual(expectedName, row.Name);
         Assert.AreEqual(expectedProfile, row.Profile);
         Assert.AreEqual(expectedSize, row.Size);
+    }
+
+    private sealed class CompletionPackageEngine : IInstallerPackageEngine
+    {
+        public string DefaultInstallDirectory =>
+            Path.Combine(Path.GetTempPath(), "TextRecast");
+
+        public string ResolveInstalledDirectory() => DefaultInstallDirectory;
+
+        public bool IsInstalled(string installDirectory) => false;
+
+        public string ValidateInstallDirectory(string installDirectory) => installDirectory;
+
+        public string GetInstalledApplicationPath(string installDirectory) =>
+            Path.Combine(installDirectory, "Application", "TextRecast.exe");
+
+        public void ConfigureShellIntegration(
+            string installDirectory,
+            bool createDesktopShortcut,
+            bool launchAtStartup)
+        {
+        }
+
+        public Task<PackageOperationResult> InstallAsync(string installDirectory) =>
+            Task.FromResult(new PackageOperationResult(0, "Installed."));
+
+        public Task<PackageOperationResult> UninstallAsync(string installDirectory) =>
+            Task.FromResult(new PackageOperationResult(0, "Removed."));
     }
 }

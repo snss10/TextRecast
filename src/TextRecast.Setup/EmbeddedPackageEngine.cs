@@ -23,6 +23,11 @@ internal interface IInstallerPackageEngine
 
     string GetInstalledApplicationPath(string installDirectory);
 
+    void ConfigureShellIntegration(
+        string installDirectory,
+        bool createDesktopShortcut,
+        bool launchAtStartup);
+
     Task<PackageOperationResult> InstallAsync(string installDirectory);
 
     Task<PackageOperationResult> UninstallAsync(string installDirectory);
@@ -212,6 +217,88 @@ internal sealed class EmbeddedPackageEngine : IInstallerPackageEngine
         return Path.Combine(
             GetApplicationDirectory(validatedDirectory),
             WindowsInstallerIdentity.ExecutableName);
+    }
+
+    public void ConfigureShellIntegration(
+        string installDirectory,
+        bool createDesktopShortcut,
+        bool launchAtStartup)
+    {
+        var validatedDirectory = ValidateInstallDirectory(installDirectory);
+        VerifyInstalledPayload(validatedDirectory);
+
+        var programsDirectory = GetRequiredSpecialFolder(
+            Environment.SpecialFolder.Programs,
+            "Start Menu programs");
+        var desktopDirectory = GetRequiredSpecialFolder(
+            Environment.SpecialFolder.DesktopDirectory,
+            "Desktop");
+        var startupDirectory = GetRequiredSpecialFolder(
+            Environment.SpecialFolder.Startup,
+            "Startup");
+        var shortcutFileName = WindowsInstallerIdentity.StartMenuShortcutName;
+        var sourceShortcut = Path.Combine(
+            programsDirectory,
+            WindowsInstallerIdentity.StartMenuFolderName,
+            shortcutFileName);
+
+        ConfigureShortcutFiles(
+            sourceShortcut,
+            Path.Combine(desktopDirectory, shortcutFileName),
+            Path.Combine(startupDirectory, shortcutFileName),
+            createDesktopShortcut,
+            launchAtStartup);
+    }
+
+    internal static void ConfigureShortcutFiles(
+        string sourceShortcut,
+        string desktopShortcut,
+        string startupShortcut,
+        bool createDesktopShortcut,
+        bool launchAtStartup)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceShortcut);
+        ArgumentException.ThrowIfNullOrWhiteSpace(desktopShortcut);
+        ArgumentException.ThrowIfNullOrWhiteSpace(startupShortcut);
+
+        if ((createDesktopShortcut || launchAtStartup) &&
+            !File.Exists(sourceShortcut))
+        {
+            throw new FileNotFoundException(
+                "The installed TextRecast Start Menu shortcut is missing.",
+                sourceShortcut);
+        }
+
+        ConfigureShortcut(sourceShortcut, desktopShortcut, createDesktopShortcut);
+        ConfigureShortcut(sourceShortcut, startupShortcut, launchAtStartup);
+    }
+
+    private static void ConfigureShortcut(
+        string sourceShortcut,
+        string destinationShortcut,
+        bool enabled)
+    {
+        if (!enabled)
+        {
+            File.Delete(destinationShortcut);
+            return;
+        }
+
+        var destinationDirectory = Path.GetDirectoryName(destinationShortcut) ??
+            throw new InvalidDataException("The shortcut destination is invalid.");
+        Directory.CreateDirectory(destinationDirectory);
+        File.Copy(sourceShortcut, destinationShortcut, overwrite: true);
+    }
+
+    private static string GetRequiredSpecialFolder(
+        Environment.SpecialFolder specialFolder,
+        string displayName)
+    {
+        var path = Environment.GetFolderPath(specialFolder);
+        return string.IsNullOrWhiteSpace(path)
+            ? throw new InvalidOperationException(
+                $"The current user's {displayName} directory is unavailable.")
+            : Path.GetFullPath(path);
     }
 
     internal void EnsureInstallTargetIsOwnedOrEmpty(string installDirectory)

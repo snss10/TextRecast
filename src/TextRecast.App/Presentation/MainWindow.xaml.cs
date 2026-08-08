@@ -81,7 +81,7 @@ public partial class MainWindow : Window
         }
         else
         {
-            await FormatSelectedTextAsync();
+            await ToggleEditorAsync();
         }
     }
 
@@ -97,8 +97,22 @@ public partial class MainWindow : Window
         {
             _captureTargetWindow = NativeMethods.GetForegroundWindowHandle();
             e.Handled = true;
-            await FormatSelectedTextAsync();
+            await ToggleEditorAsync();
         }
+    }
+
+    internal bool IsEditorVisible => _resultWindow?.IsVisible == true;
+
+    internal async Task ToggleEditorAsync()
+    {
+        if (IsEditorVisible)
+        {
+            _captureTargetWindow = IntPtr.Zero;
+            _resultWindow!.Close();
+            return;
+        }
+
+        await FormatSelectedTextAsync();
     }
 
     private async Task FormatSelectedTextAsync()

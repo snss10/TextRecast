@@ -198,13 +198,13 @@ public partial class ResultWindow : Window
             }
 
             _selection = null;
-            SetStatus(
-                string.IsNullOrWhiteSpace(result.Warning)
-                    ? "Selection replaced successfully."
-                    : BuildStatus(result.Message, result.Warning),
-                string.IsNullOrWhiteSpace(result.Warning)
-                    ? StatusKind.Success
-                    : StatusKind.Warning);
+            if (!string.IsNullOrWhiteSpace(result.Warning))
+            {
+                SetStatus(BuildStatus(result.Message, result.Warning), StatusKind.Warning);
+                return;
+            }
+
+            Close();
         }
         catch (OperationCanceledException)
         {

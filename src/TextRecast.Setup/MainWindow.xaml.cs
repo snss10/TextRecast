@@ -492,6 +492,24 @@ public partial class MainWindow : Window, IDisposable
 
     private void FinishSetup()
     {
+        try
+        {
+            engine.ConfigureShellIntegration(
+                coordinator.Destination,
+                DesktopShortcutCheckBox.IsChecked == true,
+                StartupCheckBox.IsChecked == true);
+        }
+        catch (Exception exception) when (exception is
+            IOException or
+            InvalidDataException or
+            InvalidOperationException or
+            UnauthorizedAccessException or
+            ArgumentException)
+        {
+            ShowError($"TextRecast was installed, but its Windows shortcuts could not be updated. {exception.Message}");
+            return;
+        }
+
         if (LaunchCheckBox.IsChecked == true)
         {
             var executablePath = engine.GetInstalledApplicationPath(coordinator.Destination);
@@ -515,7 +533,7 @@ public partial class MainWindow : Window, IDisposable
 
     private static string GetApplicationVersion()
     {
-        return Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.2.0";
+        return Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.3.0";
     }
 
     private static string BuildLicensePreview()
